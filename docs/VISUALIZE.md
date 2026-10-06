@@ -7,7 +7,7 @@ was changed. No live provider or Telegram calls were made during verification.
 ## Current behavior
 
 ```text
-/visualize October [2026]
+/visualize MONTH [YEAR]
   -> existing authenticated BotService
   -> isolated graph using existing WorkflowState / chain / guarded patterns
   -> deterministic month parsing (Asia/Jakarta current year when omitted)
@@ -19,8 +19,10 @@ was changed. No live provider or Telegram calls were made during verification.
   -> existing worker and TelegramClient, one multipart sendPhoto request
 ```
 
-English/Indonesian month names are case insensitive; explicit `YYYY-MM` is also
-accepted. Missing, malformed, and out-of-range dates produce usage guidance.
+`MONTH` is a required English or Indonesian month name and supports any calendar
+month, case insensitively. `[YEAR]` is optional; the brackets indicate optional
+syntax and should not be typed. `/visualize YYYY-MM` is also accepted. Each request
+covers one month. Missing, malformed, and out-of-range dates produce usage guidance.
 The existing report-year bounds apply. There are no ledger mutations or new
 confirmation requirements. Opening money is excluded from monthly cashflow.
 

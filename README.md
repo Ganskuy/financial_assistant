@@ -2,7 +2,7 @@
 
 A personal IDR finance assistant accessed through private Telegram chats. It captures expense/income text and receipt photos, stages every financial change for confirmation, and calculates balances and reports from an immutable PostgreSQL ledger. Budgets and savings goals also require confirmation. OpenRouter is the only model gateway.
 
-`/visualize October` produces a monthly financial PNG report in Telegram from confirmed ledger entries. It uses deterministic charts with the existing Pillow dependency and makes no AI calls. See [visualization behavior and limitations](docs/VISUALIZE.md).
+`/visualize MONTH [YEAR]` produces a financial PNG report in Telegram for the selected month from confirmed ledger entries. Any calendar month is supported. It uses deterministic charts with the existing Pillow dependency and makes no AI calls. See [visualization behavior and limitations](docs/VISUALIZE.md).
 
 ## Architecture
 
@@ -182,8 +182,7 @@ Both produce an opening-balance preview without an AI call. Tap **Confirm** to i
 /opening 813794
 /balance
 /report 2026-10
-/visualize October
-/visualize October 2026
+/visualize MONTH [YEAR]
 /history
 /usage
 /budget
@@ -211,13 +210,11 @@ Only allowlisted fields can change. Expense/income type and currency cannot be a
 ### Monthly visual reports
 
 ```text
-/visualize October
-/visualize OCTOBER 2026
-/visualize Oktober 2026
-/visualize 2026-10
+/visualize MONTH [YEAR]
+/visualize YYYY-MM
 ```
 
-English and Indonesian month names are case insensitive. Without a year, the command uses the current year in **Asia/Jakarta**. Missing/invalid arguments return usage guidance; months without transactions return a short no-data message.
+Replace `MONTH` with any English or Indonesian month name; names are case insensitive. `MONTH` is required and `[YEAR]` is optional—omit the brackets when entering a year. Alternatively, use `YYYY-MM` for a numeric year and month. Each request covers one calendar month. Without a year, the command uses the current year in **Asia/Jakarta**. Missing/invalid arguments return usage guidance; months without transactions return a short no-data message.
 
 Reports show income, expenses, net cashflow, leading categories, and a previous-month spending comparison when available. Months with expenses include an income/expense bar chart, expense-category pie chart, and daily spending line chart. Income-only months show income/expense and income-category bar charts. All figures come from confirmed transactions belonging to the requesting user; opening money is excluded from monthly cashflow.
 
