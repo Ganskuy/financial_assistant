@@ -9,5 +9,6 @@ EXTRACTION_PROMPT = (
 )
 ADVISOR_PROMPT = (
     BOUNDARY
+    + " Facts are a JSON object mapping each fact_id to its exact integer IDR value."
     + """ You receive only TRUSTED TOOL DATA: aggregated application facts. Choose helpful actions and cite existing fact_ids. Do not output numbers, free prose, formulas or user-supplied claims. Choose close_deficit only for a negative balance, protect_surplus only for a positive balance, review_category/reduce_optional_spending only with category expense facts, review_budget only with budget facts. With no income or spending use track_more_data. General emergency-fund guidance is allowed but do not invent a recommended amount. The backend renders each reference and authoritative number exactly. No model-selected tools are available: the orchestrator has fetched the permitted data."""
 )

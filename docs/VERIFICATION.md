@@ -1,5 +1,13 @@
 # Verification record — 2026-10-05 (Asia/Jakarta)
 
+## Aggregation efficiency — 2026-10-07
+
+- Full local regression suite: **178 passed**, with an isolated PostgreSQL 14.18 database migrated through revision 0003 and mocked external APIs.
+- Monthly summaries use one SQL aggregate query. Advisor context uses three data queries for an active month and reuses the same expense totals for budgets; empty months use one query and no model call.
+- A 110-transaction regression fixture (100 expenses, 10 income entries) verifies exact aggregated amounts and a model payload that contains only four facts for its two categories, without raw transaction metadata.
+- Tests cover unchanged command summaries, user isolation, visualization/summary parity, ten-goal advisor limit while `/savings` retains all goals, compact fact-ID rendering, large-integer precision, and input-envelope rejection.
+- No live provider cost/latency benchmark was performed. Existing model configuration, token-budget policy, database schema, dependencies, and deployment settings are unchanged.
+
 ## Executed successfully
 
 - Created the requested `envir` using Python 3.11.14 and installed `requirements.txt` from PyPI. Resolved dependencies were frozen; `pip check` reported no broken requirements.

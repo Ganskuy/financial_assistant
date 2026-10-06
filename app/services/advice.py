@@ -1,3 +1,5 @@
+import json
+
 from app.core.errors import InvalidModelOutput
 from app.schemas.finance import Advice
 from app.services.finance import format_summary
@@ -33,6 +35,18 @@ def make_facts(summary: dict, budgets: list[dict], savings: list[dict]) -> dict:
                 "value": row[key],
             }
     return facts
+
+
+def compact_advisor_payload(facts: dict) -> str:
+    """Labels stay on the backend; self-describing fact IDs carry exact integer values."""
+    payload = "TRUSTED TOOL DATA\n" + json.dumps(
+        {key: fact["value"] for key, fact in facts.items()},
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+    if len(payload) > 6000:
+        raise InvalidModelOutput()
+    return payload
 
 
 def render_advice(advice: Advice, facts: dict, summary: dict) -> str:

@@ -29,7 +29,7 @@ flowchart TD
     P --> TG
     TG --> CX
     CX --> S[Finance / Pending services]
-    AX --> T[Typed read tools: injected user identity]
+    AX --> T[Aggregated advisor context: injected user identity]
     T --> S
     C --> S
     S --> RP[Scoped repositories]
@@ -59,6 +59,22 @@ One API container and PostgreSQL. No Redis, queue server, vector database, RAG, 
 | Other ambiguous natural language | Extraction may select report/advice → advisor | Up to 2 |
 
 Transient retries can add one model call if another full reservation fits. No model fallback chain is enabled. All calls, including live evals and retries, share the same global budget.
+
+### Backend aggregation and model efficiency
+
+Financial aggregation happens before advisor model calls. `/report`, monthly `/balance`, `/budget`, and `/advice` share the existing monthly summary calculation: SQL groups confirmed transactions by type/category, and the backend combines those sums using integer IDR. The summary now requires one query. `/balance` without a month retains its separate opening-balance calculation.
+
+Advisor context reuses that summary for budget spending and loads at most ten savings goals from the database. A nonempty month requires three data queries instead of six; an empty month requires one query and no model call. No cross-request cache is used, so newly confirmed entries are included on the next request.
+
+The advisor receives compact JSON mapping fact IDs to authoritative amounts, for example:
+
+```json
+{"income":10000000,"expenses":100000,"balance":9900000,"category.food":100000}
+```
+
+Budget and savings facts are included when present. Labels are kept on the backend for rendering, and transaction rows, descriptions, merchants, and savings-goal names are excluded from advisor input. A regression test with 100 expenses and 10 income entries verifies that input size follows the number of aggregate facts rather than the number of transactions. Existing schema validation, grounded replies, deadlines, retry limits, and global token reservations still apply. Extraction/OCR necessarily reads the newly submitted text or receipt; it does not load historical ledger entries.
+
+`/visualize` keeps its separate daily/category aggregation because charts need time-series data and a previous-month comparison. Other commands avoid retrieving that extra detail. These changes reduce query count and model-input bytes; live provider latency, billed tokens, and monetary savings have not been benchmarked.
 
 ### Modules and database
 

@@ -19,36 +19,24 @@ class FinanceRepository:
             Transaction.transaction_date >= start,
             Transaction.transaction_date < end,
         )
-        income, expenses = (
-            await self.session.execute(
-                select(
-                    func.coalesce(
-                        func.sum(case((Transaction.type == "income", Transaction.amount), else_=0)),
-                        0,
-                    ),
-                    func.coalesce(
-                        func.sum(
-                            case((Transaction.type == "expense", Transaction.amount), else_=0)
-                        ),
-                        0,
-                    ),
-                ).where(*filters)
-            )
-        ).one()
         rows = (
             await self.session.execute(
-                select(Transaction.category, func.sum(Transaction.amount))
-                .where(*filters, Transaction.type == "expense")
-                .group_by(Transaction.category)
-                .order_by(Transaction.category)
+                select(Transaction.type, Transaction.category, func.sum(Transaction.amount))
+                .where(*filters)
+                .group_by(Transaction.type, Transaction.category)
+                .order_by(Transaction.type, Transaction.category)
             )
         ).all()
+        income = sum(int(amount) for kind, _, amount in rows if kind == "income")
+        expenses = sum(int(amount) for kind, _, amount in rows if kind == "expense")
         return {
             "period": start.strftime("%Y-%m"),
-            "income": int(income),
-            "expenses": int(expenses),
-            "balance": int(income - expenses),
-            "by_category": {k: int(v) for k, v in rows},
+            "income": income,
+            "expenses": expenses,
+            "balance": income - expenses,
+            "by_category": {
+                category: int(amount) for kind, category, amount in rows if kind == "expense"
+            },
         }
 
     async def current_balance(self, on_date: date) -> dict:
@@ -96,7 +84,9 @@ class FinanceRepository:
             ).all()
         )
 
-    async def budgets(self, start: date, end: date) -> list[dict]:
+    async def budgets(
+        self, start: date, end: date, *, spending: dict[str, int] | None = None
+    ) -> list[dict]:
         rows = (
             await self.session.scalars(
                 select(Budget)
@@ -104,7 +94,10 @@ class FinanceRepository:
                 .order_by(Budget.category)
             )
         ).all()
-        spending = (await self.summary(start, end))["by_category"]
+        if not rows:
+            return []
+        if spending is None:
+            spending = (await self.summary(start, end))["by_category"]
         return [
             {
                 "category": r.category,
@@ -115,7 +108,7 @@ class FinanceRepository:
             for r in rows
         ]
 
-    async def goals(self) -> list[dict]:
+    async def goals(self, *, limit: int | None = None) -> list[dict]:
         rows = (
             await self.session.execute(
                 select(SavingsGoal, func.coalesce(func.sum(SavingsContribution.amount), 0))
@@ -126,7 +119,8 @@ class FinanceRepository:
                 )
                 .where(SavingsGoal.user_id == self.user_id)
                 .group_by(SavingsGoal.id)
-                .order_by(SavingsGoal.created_at)
+                .order_by(SavingsGoal.created_at, SavingsGoal.id)
+                .limit(limit)
             )
         ).all()
         return [

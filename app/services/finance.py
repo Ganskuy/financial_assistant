@@ -42,6 +42,18 @@ class FinanceService:
         async with self.db.transaction() as session:
             return await FinanceRepository(session, self.user_id).goals()
 
+    async def advisor_context(self, period: str | None = None) -> dict:
+        """Fetch only aggregated facts, reusing the monthly spending calculation."""
+        start, end = month_bounds(period)
+        async with self.db.transaction() as session:
+            repository = FinanceRepository(session, self.user_id)
+            summary = await repository.summary(start, end)
+            if summary["income"] == 0 and summary["expenses"] == 0:
+                return {"summary": summary, "budgets": [], "savings": []}
+            budgets = await repository.budgets(start, end, spending=summary["by_category"])
+            savings = await repository.goals(limit=10)
+            return {"summary": summary, "budgets": budgets, "savings": savings}
+
     async def trend(self, period: str | None = None) -> dict:
         start, _ = month_bounds(period)
         previous = (start - timedelta(days=1)).strftime("%Y-%m")

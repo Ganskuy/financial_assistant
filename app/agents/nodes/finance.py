@@ -2,10 +2,9 @@ import json
 
 from app.agents.prompts.system import ADVISOR_PROMPT, EXTRACTION_PROMPT, OCR_PROMPT
 from app.agents.state import WorkflowState
-from app.agents.tools import safe_tools
 from app.core.errors import InvalidInput, InvalidModelOutput, SafeError
 from app.schemas.finance import OCR, Advice, Extraction
-from app.services.advice import make_facts, render_advice
+from app.services.advice import compact_advisor_payload, make_facts, render_advice
 from app.services.finance import FinanceService, format_summary
 from app.services.pending import PendingService
 from app.services.validation import today, validate_transaction
@@ -90,12 +89,14 @@ class FinanceNodes:
         return {"pending_id": pending.id}
 
     async def gather(self, state):
-        tools = safe_tools(FinanceService(self.db, state["user_id"]))
-        args = {"period": state.get("period")}
-        summary = await tools["get_monthly_summary"].ainvoke(args)
-        budgets = await tools["get_budget_status"].ainvoke(args)
-        savings = await tools["get_savings_progress"].ainvoke({})
-        return {"summary": summary, "facts": make_facts(summary, budgets, savings[:10])}
+        context = await FinanceService(self.db, state["user_id"]).advisor_context(
+            state.get("period")
+        )
+        summary = context["summary"]
+        return {
+            "summary": summary,
+            "facts": make_facts(summary, context["budgets"], context["savings"]),
+        }
 
     async def advise(self, state):
         if state["summary"]["income"] == 0 and state["summary"]["expenses"] == 0:
@@ -109,7 +110,7 @@ class FinanceNodes:
             advice = await self.llm.structured(
                 "advisor",
                 ADVISOR_PROMPT,
-                "TRUSTED TOOL DATA\n" + json.dumps(state["facts"], ensure_ascii=False),
+                compact_advisor_payload(state["facts"]),
                 Advice,
             )
             return {"advice": advice}
