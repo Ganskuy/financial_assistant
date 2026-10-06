@@ -40,6 +40,7 @@ COMMANDS = {
     "save",
     "pending",
     "advice",
+    "visualize",
 }
 
 

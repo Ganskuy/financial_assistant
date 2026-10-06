@@ -2,6 +2,8 @@
 
 A personal IDR finance assistant accessed through private Telegram chats. It captures expense/income text and receipt photos, stages every financial change for confirmation, and calculates balances and reports from an immutable PostgreSQL ledger. Budgets and savings goals also require confirmation. OpenRouter is the only model gateway.
 
+`/visualize October` produces a monthly financial PNG report in Telegram from confirmed ledger entries. The current implementation uses deterministic charts with the existing Pillow dependency and makes no AI calls. GPT-6.1 Sol analysis and React/Recharts export are not enabled; see [visualization behavior and limitations](docs/VISUALIZE.md).
+
 ## Architecture
 
 ```mermaid
@@ -15,6 +17,13 @@ flowchart TD
     R --> TX[Transaction LangGraph: extraction + intent]
     R --> AX[Advisor LangGraph]
     R --> CX[Confirmation / correction LangGraph]
+    R --> VX[Visualization LangGraph: no model calls]
+    VX --> VA[Scoped monthly SQL aggregation]
+    VA --> DB
+    VA --> VS[Validated chart specification]
+    VS --> PNG[Pillow charts: PNG report]
+    PNG --> Q
+    W --> TG
     RX --> P[Validated pending operation]
     TX --> P
     P --> TG
@@ -41,6 +50,7 @@ One API container and PostgreSQL. No Redis, queue server, vector database, RAG, 
 |---|---|---:|
 | `/balance`, `/history`, `/usage`, `/help` | SQL/static response | 0 |
 | `/report [YYYY-MM]` | SQL category aggregation | 0 |
+| `/visualize MONTH [YEAR]` | SQL aggregation → validated chart spec → PNG → Telegram | 0 |
 | `/budget`, `/savings`, goal/budget commands | SQL or validated pending change | 0 |
 | Confirm / Edit / Cancel | Ownership, version, expiry, transaction | 0 |
 | Expense/income text | Combined classification + structured extraction → preview | 1 |
@@ -56,7 +66,7 @@ Transient retries can add one model call if another full reservation fits. No mo
 app/
   api/                  Webhook and health routes
   agents/
-    graphs/             Receipt, transaction, advisor, confirmation graphs
+    graphs/             Receipt, transaction, advisor, confirmation, visualization graphs
     nodes/              Model, validation, staging, gathering and rendering nodes
     prompts/            Versioned trust-boundary prompts
     state.py            Typed graph state
@@ -66,7 +76,7 @@ app/
   models/               SQLAlchemy table definitions
   repositories/         Scoped financial queries and durable inbox
   schemas/              Strict financial schemas and Telegram transport schemas
-  services/             Business rules, pending operations, advice, worker
+  services/             Business rules, pending operations, advice, chart rendering, worker
   telegram/             Bot API transport, safe image decoding, routing
 alembic/versions/        Versioned schema and edit-recovery migrations
 scripts/                Webhook setup, model catalog checks, opt-in live eval
@@ -88,11 +98,23 @@ cd /Users/haifanghani/Documents/financial_assistant
 python3.11 -m venv envir
 source envir/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+touch .env
 python -c 'import secrets; print(secrets.token_urlsafe(32))'
 ```
 
 Edit `.env`. Generate `APP_SECRET_KEY` and `TELEGRAM_WEBHOOK_SECRET` independently. Set the bot token, allowed numeric Telegram user IDs, OpenRouter key and PostgreSQL password. Use a URL-safe random PostgreSQL password (the generator above is suitable) or correctly URL-encode the password in `DATABASE_URL`. No real credentials are provided or committed.
+
+There is no committed `.env.example`. Add these required values to your local `.env`; replace every angle-bracket placeholder before running:
+
+```dotenv
+APP_SECRET_KEY=<generated-secret>
+TELEGRAM_WEBHOOK_SECRET=<different-generated-secret>
+TELEGRAM_BOT_TOKEN=<BotFather-token>
+TELEGRAM_ALLOWED_USER_IDS=<your-numeric-Telegram-user-id>
+OPENROUTER_API_KEY=<your-OpenRouter-key>
+POSTGRES_PASSWORD=<URL-safe-database-password>
+DATABASE_URL=postgresql+asyncpg://finance:<same-URL-safe-database-password>@127.0.0.1:5433/finance
+```
 
 Start only the database, migrate, then run the API:
 
@@ -103,7 +125,7 @@ python -m scripts.check_models
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
-`.env.example` points `DATABASE_URL` at local PostgreSQL. To use an existing PostgreSQL server instead of Docker, create a dedicated role/database and set `DATABASE_URL=postgresql+asyncpg://...`. Runtime settings use python-dotenv without overriding injected environment variables; container secret injection works normally. `APP_SECRET_KEY` is used for keyed identity hashes in logs, not as a replacement for the webhook secret.
+Compose exposes PostgreSQL on host port **5433**; the database container uses port 5432 internally. To use an existing PostgreSQL server instead of Docker, create a dedicated role/database and set `DATABASE_URL` to that server. Runtime settings use python-dotenv without overriding injected environment variables; container secret injection works normally. `APP_SECRET_KEY` is used for keyed identity hashes in logs, not as a replacement for the webhook secret.
 
 Check the API:
 
@@ -144,6 +166,8 @@ Both produce an opening-balance preview without an AI call. Tap **Confirm** to i
 /opening 813794
 /balance
 /report 2026-10
+/visualize October
+/visualize October 2026
 /history
 /usage
 /budget
@@ -167,6 +191,23 @@ transaction_date=2026-10-05
 ```
 
 Only allowlisted fields can change. Expense/income type and currency cannot be altered through arbitrary field injection. Receipt amounts cannot be changed independently of their item/tax arithmetic: cancel and submit corrected text instead. Use `/pending` to reopen active previews. Pending operations expire after 30 minutes by default; editing does not extend the original expiry. A confirmed entry is immutable.
+
+### Monthly visual reports
+
+```text
+/visualize October
+/visualize OCTOBER 2026
+/visualize Oktober 2026
+/visualize 2026-10
+```
+
+English and Indonesian month names are case insensitive. Without a year, the command uses the current year in **Asia/Jakarta**. Missing/invalid arguments return usage guidance; months without transactions return a short no-data message.
+
+Reports show income, expenses, net cashflow, leading categories, and a previous-month spending comparison when available. Months with expenses include an income/expense bar chart, expense-category pie chart, and daily spending line chart. Income-only months show income/expense and income-category bar charts. All figures come from confirmed transactions belonging to the requesting user; opening money is excluded from monthly cashflow.
+
+The graph aggregates both months in one database query and uses integer IDR and Decimal percentages. Chart specifications accept only supported types and metrics; they cannot supply replacement financial values or executable code. PNG generation stays in memory. The existing durable worker stores the response before delivery and reuses it on Telegram retries. If rendering fails, the bot returns verified text instead. As with existing messages, an ambiguous Telegram timeout can still cause duplicate delivery.
+
+This feature needs no new environment variables, dependencies, migrations, frontend, or browser runtime. **The active path is deterministic Pillow rendering, not GPT-6.1 Sol or Recharts.** An optional analyzer boundary is schema-validated and tested with mocks, but no Sol transport is configured. See [the full contract, failure behavior, tests, and integration blockers](docs/VISUALIZE.md).
 
 ## OpenRouter and the global 100,000-token limit
 
@@ -216,13 +257,15 @@ Create and migrate a disposable database:
 
 ```bash
 docker compose exec postgres createdb -U finance finance_test
-export TEST_DATABASE_URL='postgresql+asyncpg://finance:YOUR_URL_SAFE_PASSWORD@127.0.0.1:5432/finance_test'
+export TEST_DATABASE_URL='postgresql+asyncpg://finance:YOUR_URL_SAFE_PASSWORD@127.0.0.1:5433/finance_test'
 DATABASE_URL="$TEST_DATABASE_URL" alembic upgrade head
 DATABASE_URL="$TEST_DATABASE_URL" alembic check
 pytest -q
 ```
 
 CI provisions PostgreSQL 16, applies migrations, checks model/schema drift, runs lint/format checks, executes the full suite, and builds the Docker image. Real provider calls are never part of CI.
+
+Final local verification on 2026-10-06: **173 tests passed**, including 50 visualization tests and the full existing regression suite, using an isolated PostgreSQL 14.18 database with mocked external APIs. Lint, formatting, dependency consistency, migration-drift checks, and Compose validation passed. Live Telegram/Sol calls and a local Docker image build were not verified; Docker was not running. See [visualization verification details](docs/VISUALIZE.md).
 
 Optional, billed extraction evaluation against the golden fixtures:
 
@@ -260,7 +303,7 @@ docker run -d --name financial-assistant --restart unless-stopped \
 Production procedure:
 
 1. Provision a managed PostgreSQL database with TLS, backups/PITR, and private or restricted networking. Set `DATABASE_URL` to its `postgresql+asyncpg://` URL using `?ssl=require` (or the provider's CA-verified SSL setup). Use separate migration and runtime roles. Runtime needs table SELECT/INSERT and workflow/budget UPDATE plus schema usage; it does not need CREATE, TRUNCATE, or ledger UPDATE/DELETE. Test permissions in staging.
-2. Inject `.env.example` settings with `APP_ENV=production`, real secrets and the allowed Telegram IDs. Keep one dedicated OpenRouter key. Pin base-image digests and the release image digest in the deployment manifest after building/scanning them.
+2. Inject the settings listed under Local setup with `APP_ENV=production`, real secrets and the allowed Telegram IDs. Keep one dedicated OpenRouter key. Pin base-image digests and the release image digest in the deployment manifest after building/scanning them.
 3. Back up PostgreSQL, run `alembic upgrade head` as a separate release job, then start the image. Runtime startup never silently creates or migrates tables.
 4. Terminate HTTPS in the hosting platform or a reverse proxy. Set request-size/time limits, restrict backend port 8000, and forward the Telegram secret header unchanged. Do not log full webhook bodies or secret headers. No browser UI is required.
 5. Verify `/ready`, run catalog checks and staging acceptance, then register the webhook. Keep database connections within the managed-plan allowance: each API process uses an 8-connection pool with up to 4 overflow connections.

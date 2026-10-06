@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import binascii
 import io
 import re
 import warnings
@@ -35,6 +37,9 @@ class TelegramClient:
             raise TelegramUnavailable("Telegram request failed") from exc
 
     async def send(self, chat_id: int, result: dict) -> None:
+        if result.get("photo_png"):
+            await self.send_report(chat_id, result)
+            return
         text = result["text"]
         # Telegram limits UTF-16 units. 1800 Unicode codepoints safely fits, including emoji.
         chunks = [text[i : i + 1800] for i in range(0, len(text), 1800)] or ["No data."]
@@ -48,6 +53,39 @@ class TelegramClient:
             if index == len(chunks) - 1 and result.get("reply_markup"):
                 payload["reply_markup"] = result["reply_markup"]
             await self.call("sendMessage", payload)
+
+    async def send_report(self, chat_id: int, result: dict) -> None:
+        """One delivery request; the worker persists/retries the same artifact."""
+        try:
+            encoded = result["photo_png"]
+            if not isinstance(encoded, str) or len(encoded) > 2_666_668:
+                raise ValueError("Invalid report size")
+            png = base64.b64decode(encoded, validate=True)
+            if len(png) > 2_000_000 or not png.startswith(b"\x89PNG\r\n\x1a\n"):
+                raise ValueError("Invalid report image")
+            async with asyncio.timeout(20):
+                response = await self.http.post(
+                    self.root + "/sendPhoto",
+                    data={
+                        "chat_id": str(chat_id),
+                        "caption": result["text"][:500],
+                        "protect_content": "true",
+                    },
+                    files={"photo": ("financial-report.png", png, "image/png")},
+                    timeout=15,
+                )
+            value = response.json()
+            if response.status_code != 200 or not isinstance(value, dict) or not value.get("ok"):
+                raise TelegramUnavailable("Report delivery failed")
+        except (
+            httpx.HTTPError,
+            ValueError,
+            KeyError,
+            TypeError,
+            binascii.Error,
+            TimeoutError,
+        ) as exc:
+            raise TelegramUnavailable("Report delivery failed") from exc
 
     async def receipt(
         self, file_id: str, declared_size: int | None, mime: str | None = None

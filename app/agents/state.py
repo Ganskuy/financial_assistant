@@ -2,6 +2,7 @@ from typing import TypedDict
 from uuid import UUID
 
 from app.schemas.finance import Advice, Extraction
+from app.schemas.visualization import VisualizationSpec
 
 
 class WorkflowState(TypedDict, total=False):
@@ -21,3 +22,6 @@ class WorkflowState(TypedDict, total=False):
     advice: Advice
     response: dict
     error: str
+    visualization_data: dict
+    visualization_spec: VisualizationSpec
+    visualization_analysis_status: str

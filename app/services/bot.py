@@ -7,8 +7,10 @@ from app.agents.graphs.workflows import (
     confirmation_graph,
     receipt_graph,
     transaction_graph,
+    visualization_graph,
 )
 from app.agents.nodes.finance import FinanceNodes
+from app.agents.nodes.visualization import VisualizationNodes
 from app.core.errors import InvalidInput
 from app.schemas.telegram import Update
 from app.services.finance import FinanceService, format_balance, format_summary
@@ -27,6 +29,7 @@ Every change requires Confirm. Nothing is saved from extraction alone.
 /balance — current tracked balance including opening money
 /balance YYYY-MM — monthly income minus expenses
 /report [YYYY-MM] — category report, no AI
+/visualize MONTH [YEAR] — monthly charts from confirmed records
 /history — latest 10 entries
 /usage — global AI token allowance
 /advice [YYYY-MM] — grounded guidance
@@ -52,6 +55,7 @@ class BotService:
         self.transaction = transaction_graph(nodes)
         self.advisor = advisor_graph(nodes)
         self.confirmation = confirmation_graph(nodes)
+        self.visualization = visualization_graph(VisualizationNodes(db, settings, llm))
 
     async def process(self, update: Update) -> dict:
         with tracing_context(enabled=False):
@@ -108,6 +112,8 @@ class BotService:
             )["response"]
         if route.name in {"help", "start"}:
             return {"text": HELP}
+        if route.name == "visualize":
+            return (await self.visualization.ainvoke({**state, "text": route.args}))["response"]
         if route.name == "opening":
             if not route.args:
                 return {

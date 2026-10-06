@@ -64,6 +64,17 @@ def advisor_graph(nodes: FinanceNodes):
     return graph.compile()
 
 
+def visualization_graph(nodes: FinanceNodes):
+    graph = base_graph(nodes)
+    chain(
+        graph,
+        nodes,
+        ["parse_visualize", "aggregate_visualize", "analyze_visualize", "render_visualize"],
+    )
+    graph.add_edge(START, "parse_visualize")
+    return graph.compile()
+
+
 def confirmation_graph(nodes: FinanceNodes):
     graph = base_graph(nodes)
     chain(graph, nodes, ["callback"])
