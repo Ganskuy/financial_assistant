@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+MAX_DAILY_LLM_TOKENS = 100_000
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -24,7 +26,9 @@ class Settings(BaseSettings):
     openrouter_advisor_model: str = "openai/gpt-5.4"
     openrouter_timeout_seconds: float = Field(default=45, ge=1, le=90)
     openrouter_max_attempts: int = Field(default=2, ge=1, le=2)
-    daily_llm_token_limit: int = Field(default=20000, ge=1, le=20000)
+    daily_llm_token_limit: int = Field(
+        default=MAX_DAILY_LLM_TOKENS, ge=1, le=MAX_DAILY_LLM_TOKENS
+    )
     vision_max_output_tokens: int = Field(default=1800, ge=128, le=3000)
     extraction_max_output_tokens: int = Field(default=1600, ge=128, le=3000)
     advisor_max_output_tokens: int = Field(default=1200, ge=128, le=3000)

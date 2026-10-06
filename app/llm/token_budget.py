@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 
+from app.core.config import MAX_DAILY_LLM_TOKENS
 from app.core.db import Database
 from app.core.errors import BudgetExceeded
 from app.models.tables import DailyLLMUsage, LLMReservation
@@ -16,10 +17,13 @@ BUDGET_LOCK = 723401981
 
 class TokenBudget:
     def __init__(
-        self, db: Database, limit: int = 20000, clock: Callable[[], datetime] | None = None
+        self,
+        db: Database,
+        limit: int = MAX_DAILY_LLM_TOKENS,
+        clock: Callable[[], datetime] | None = None,
     ):
-        if not 1 <= limit <= 20000:
-            raise ValueError("Hard cap cannot exceed 20000")
+        if type(limit) is not int or not 1 <= limit <= MAX_DAILY_LLM_TOKENS:
+            raise ValueError(f"Daily token limit must be between 1 and {MAX_DAILY_LLM_TOKENS}")
         self.db, self.limit = db, limit
         self.clock = clock or (lambda: datetime.now(UTC))
 

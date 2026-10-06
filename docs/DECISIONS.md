@@ -9,7 +9,7 @@ Use deterministic commands and parameterized SQL first. Use one structured extra
 | Financial writes before confirmation | Zero | PostgreSQL integration tests |
 | Duplicate ledger writes under concurrent confirmation | Zero | Concurrent callbacks + unique constraints |
 | Cross-user reads or mutations | Zero | Scoped repositories, callback/edit/tool tests |
-| Reservation admission beyond 20,000 tokens | Zero | Twenty concurrent reservation attempts |
+| Reservation admission beyond 100,000 tokens | Zero | Forty concurrent reservation attempts |
 | Unaccounted retries / uncertain calls | Zero | Mock transport + persisted reservations |
 | Authoritative numbers invented by advisor | Zero | Closed action schema, reference checks, deterministic rendering |
 | Extraction exact amount/intent on golden fixtures | 100% on small fixture set before release | Opt-in live evaluation; not claimed from mocks |
@@ -44,11 +44,11 @@ Provider usage must include prompt plus completion/reasoning tokens and honor `m
 
 Admission and reconciliation share a PostgreSQL transaction advisory lock. The condition is:
 
-`today.used + today.reserved + unresolved_previous_days + new_reservation <= configured_limit <= 20000`
+`today.used + today.reserved + unresolved_previous_days + new_reservation <= configured_limit <= 100000`
 
 Settled calls refund only the unused reservation. Missing/invalid usage, timeouts, cancellations, 429s, 5xxs and permanent HTTP errors keep the allowance because the backend cannot prove the provider did not consume tokens. Retries obtain new reservations and can be denied. Dates use Asia/Jakarta. An in-flight call crosses midnight as reserved capacity; on completion its actual usage is conservatively charged to both start and completion dates. Settled activity resets at local midnight. Unresolved reservations never disappear merely because time passed or the API restarted.
 
-Unknown calls can reduce capacity on later days. Do not clear them on a timer. Reconcile only after obtaining authoritative provider usage and verifying the request completed; a timed-out request without a returned generation ID may require an OpenRouter account usage audit. Do not edit daily counters directly. This conservative policy can reject AI requests before `/usage` shows 20,000 confirmed tokens. `/usage` separately reports reservations and available capacity.
+Unknown calls can reduce capacity on later days. Do not clear them on a timer. Reconcile only after obtaining authoritative provider usage and verifying the request completed; a timed-out request without a returned generation ID may require an OpenRouter account usage audit. Do not edit daily counters directly. This conservative policy can reject AI requests before `/usage` shows 100,000 confirmed tokens. `/usage` separately reports reservations and available capacity.
 
 ## Official references checked during implementation
 

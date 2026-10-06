@@ -168,7 +168,7 @@ transaction_date=2026-10-05
 
 Only allowlisted fields can change. Expense/income type and currency cannot be altered through arbitrary field injection. Receipt amounts cannot be changed independently of their item/tax arithmetic: cancel and submit corrected text instead. Use `/pending` to reopen active previews. Pending operations expire after 30 minutes by default; editing does not extend the original expiry. A confirmed entry is immutable.
 
-## OpenRouter and the global 20,000-token limit
+## OpenRouter and the global 100,000-token limit
 
 Defaults use `openai/gpt-5.4-nano` for image transcription and structured extraction, and `openai/gpt-5.4` with low reasoning effort for the advisor. Model slugs and API shapes were checked against official documentation. Availability changes: run `scripts.check_models` before deployment. The requested Nano model is retained even though its upstream documentation currently flags deprecation; OpenRouter catalog/account availability must be monitored.
 
@@ -177,12 +177,12 @@ The shared adapter uses async HTTPX, LangChain message/Runnable abstractions, st
 Before every call, PostgreSQL atomically checks and reserves:
 
 ```text
-used today + reserved today + unresolved prior calls + worst-case new allowance <= 20,000
+used today + reserved today + unresolved prior calls + worst-case new allowance <= 100,000
 ```
 
-A transaction-level advisory lock serializes reservation/reconciliation across workers and replicas. Input allowances include all text, JSON schemas, framing and bounded image tokens; output allowances include reasoning. Reported usage replaces a reservation and releases unused capacity. No credentials, calls, prompts or generated amounts can raise the configured cap above 20,000.
+A transaction-level advisory lock serializes reservation/reconciliation across workers and replicas. Input allowances include all text, JSON schemas, framing and bounded image tokens; output allowances include reasoning. Reported usage replaces a reservation and releases unused capacity. No credentials, calls, prompts or generated amounts can raise the configured cap above 100,000.
 
-Reset is midnight **Asia/Jakarta**. Calls crossing midnight consume conservative capacity on both days. Unknown usage is never refunded just because of timeout, failure, restart, or midnight. `/usage` shows used, reserved/uncertain and remaining available tokens. A call can be refused while confirmed usage is below 20,000 because its entire worst-case allowance must fit.
+Reset is midnight **Asia/Jakarta**. Calls crossing midnight consume conservative capacity on both days. Unknown usage is never refunded just because of timeout, failure, restart, or midnight. `/usage` shows used, reserved/uncertain and remaining available tokens. A call can be refused while confirmed usage is below 100,000 because its entire worst-case allowance must fit.
 
 **Trust boundary:** the concurrency/admission limit is enforced locally; actual remote consumption still depends on the provider honoring its token cap and the reviewed token envelope. Arbitrary configurable model slugs are rejected unless they have a reviewed profile. A provider usage violation trips a persistent breaker rather than silently allowing more calls. Unresolved reservations can reduce subsequent days' capacity until an operator obtains authoritative usage evidence. See [the full design and official references](docs/DECISIONS.md).
 
@@ -288,7 +288,7 @@ No GPU or model-serving infrastructure is needed. Start with one API process and
 | `OPENROUTER_ADVISOR_MODEL` | `openai/gpt-5.4` |
 | `OPENROUTER_TIMEOUT_SECONDS` | 45; range 1–90 |
 | `OPENROUTER_MAX_ATTEMPTS` | 2; maximum 2 |
-| `DAILY_LLM_TOKEN_LIMIT` | 20,000; may be lowered, never raised |
+| `DAILY_LLM_TOKEN_LIMIT` | 100,000; may be lowered, never raised |
 | `VISION_MAX_OUTPUT_TOKENS` | 1,800 |
 | `EXTRACTION_MAX_OUTPUT_TOKENS` | 1,600 |
 | `ADVISOR_MAX_OUTPUT_TOKENS` | 1,200 |
