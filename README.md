@@ -2,7 +2,7 @@
 
 A personal IDR finance assistant accessed through private Telegram chats. It captures expense/income text and receipt photos, stages every financial change for confirmation, and calculates balances and reports from an immutable PostgreSQL ledger. Budgets and savings goals also require confirmation. OpenRouter is the only model gateway.
 
-`/visualize October` produces a monthly financial PNG report in Telegram from confirmed ledger entries. The current implementation uses deterministic charts with the existing Pillow dependency and makes no AI calls. GPT-6.1 Sol analysis and React/Recharts export are not enabled; see [visualization behavior and limitations](docs/VISUALIZE.md).
+`/visualize October` produces a monthly financial PNG report in Telegram from confirmed ledger entries. It uses deterministic charts with the existing Pillow dependency and makes no AI calls. See [visualization behavior and limitations](docs/VISUALIZE.md).
 
 ## Architecture
 
@@ -207,7 +207,7 @@ Reports show income, expenses, net cashflow, leading categories, and a previous-
 
 The graph aggregates both months in one database query and uses integer IDR and Decimal percentages. Chart specifications accept only supported types and metrics; they cannot supply replacement financial values or executable code. PNG generation stays in memory. The existing durable worker stores the response before delivery and reuses it on Telegram retries. If rendering fails, the bot returns verified text instead. As with existing messages, an ambiguous Telegram timeout can still cause duplicate delivery.
 
-This feature needs no new environment variables, dependencies, migrations, frontend, or browser runtime. **The active path is deterministic Pillow rendering, not GPT-6.1 Sol or Recharts.** An optional analyzer boundary is schema-validated and tested with mocks, but no Sol transport is configured. See [the full contract, failure behavior, tests, and integration blockers](docs/VISUALIZE.md).
+This feature needs no new environment variables, dependencies, migrations, frontend, or browser runtime. **Reports use deterministic Pillow rendering.** An optional analyzer boundary is schema-validated and tested with mocks; it is not enabled in the running bot. See [the full contract, failure behavior, tests, and limitations](docs/VISUALIZE.md).
 
 ## OpenRouter and the global 100,000-token limit
 
@@ -265,7 +265,7 @@ pytest -q
 
 CI provisions PostgreSQL 16, applies migrations, checks model/schema drift, runs lint/format checks, executes the full suite, and builds the Docker image. Real provider calls are never part of CI.
 
-Final local verification on 2026-10-06: **173 tests passed**, including 50 visualization tests and the full existing regression suite, using an isolated PostgreSQL 14.18 database with mocked external APIs. Lint, formatting, dependency consistency, migration-drift checks, and Compose validation passed. Live Telegram/Sol calls and a local Docker image build were not verified; Docker was not running. See [visualization verification details](docs/VISUALIZE.md).
+Final local verification on 2026-10-06: **173 tests passed**, including 50 visualization tests and the full existing regression suite, using an isolated PostgreSQL 14.18 database with mocked external APIs. Lint, formatting, dependency consistency, migration-drift checks, and Compose validation passed. Live Telegram delivery and a local Docker image build were not verified; Docker was not running. See [visualization verification details](docs/VISUALIZE.md).
 
 Optional, billed extraction evaluation against the golden fixtures:
 

@@ -1,7 +1,6 @@
 # Monthly visualization extension
 
-Status: a working deterministic PNG fallback is implemented. The requested GPT-6.1
-Sol + React/Recharts path is **not complete**. No model, environment, dependency,
+Status: working deterministic PNG reports are implemented using Pillow. No model, environment, dependency,
 deployment, database schema, API, authorization, or infrastructure configuration
 was changed. No live provider or Telegram calls were made during verification.
 
@@ -49,8 +48,8 @@ confirmation requirements. Opening money is excluded from monthly cashflow.
 
 `aggregate()` returns this structure; `compact_payload()` omits only the redundant
 `weekly_expense` series and serializes compact JSON capped at the existing
-6,000-character input envelope. **Production currently sends nothing to Sol**:
-this is the implemented, tested input contract for an approved analyzer.
+6,000-character input envelope. **Production makes no visualization model calls**:
+this is the implemented, tested input contract for the optional analyzer boundary.
 
 ```text
 period: {month: English month name, year: int, start_date: ISO date, end_date: inclusive ISO date}
@@ -122,7 +121,7 @@ output is revalidated even if it returns a Pydantic object. It has an outer
 deadline using the existing provider timeout. Model retries/token reservations
 must remain inside the existing reviewed transport when that transport is wired;
 the visualization workflow itself does not duplicate retries. The analyzer is
-**not configured by BotService**; failure tests use mocks, not a real Sol adapter.
+**not configured by BotService**; failure tests use a mock analyzer.
 
 ## Failure handling and privacy
 
@@ -150,28 +149,16 @@ The photo upload follows the [Telegram sendPhoto contract](https://core.telegram
 The fallback uses [Pillow's bundled default font](https://pillow.readthedocs.io/en/stable/reference/ImageFont.html#PIL.ImageFont.load_default),
 without depending on system fonts or adding dependencies.
 
-## Exact blockers and smallest follow-up changes
+## Current limitations
 
-1. **No GPT-6.1 Sol integration.** `app/llm/router.py` only reviews GPT-5.4 family
-   profiles; `app/core/config.py` defaults the advisor to GPT-5.4. No verified Sol
-   provider ID/token envelope exists in this codebase. Selecting a different
-   existing model would silently violate the requested model choice. Enabling Sol
-   needs an approved provider ID, reviewed token profile, an isolated feature role
-   in `app/llm/router.py` / `app/llm/client.py`, feature model settings in
-   `app/core/config.py`, and analyzer wiring in `app/services/bot.py` with a
-   feature-specific prompt. Existing agent model selections must remain intact.
-2. **No React/Recharts or browser export runtime.** There is no frontend package
-   manifest, JavaScript runtime, screenshot service or browser in the Python
-   deployment. Pillow is already installed for receipt images, so it supplies the
-   safe PNG fallback. Actual Recharts export would need a small bundled React /
-   Recharts report package plus an approved browser/export runtime and associated
-   build dependencies/assets in `Dockerfile` (and its package manifest/lockfile).
-   This cannot honestly be enabled without crossing the forbidden deployment /
-   dependency boundary. No frontend shell or nonworking Recharts scaffold was added.
+Visualization decisions and insight sentences are deterministic. The optional
+analyzer interface is tested with mocks but is not connected to a model provider
+by `BotService`. No AI interpretation is performed for this command.
 
-These changes require authorization under the request's explicit configuration
-freeze. The implemented fallback does not satisfy the Sol/Recharts acceptance
-criteria and must not be described as the complete target flow.
+The renderer uses Pillow, which is already installed for receipt images. There is
+no frontend, browser export runtime, or interactive chart output. Telegram receives
+a static PNG report. Live delivery and image quality in Telegram clients still
+require deployment verification.
 
 ## Verification (2026-10-06)
 
@@ -200,6 +187,6 @@ POSTGRES_PASSWORD=test-only-compose-check docker compose --env-file /dev/null co
   verified: Docker daemon is unavailable. The old documented `.env.example` is
   absent; Compose was validated with an empty env file and a dummy password instead.
 - PNG appearance was visually inspected using synthetic data. Live Telegram image
-  quality/delivery and real Sol output remain unverified. No deployment performed.
+  quality/delivery remains unverified. No deployment performed.
 - The disposable PostgreSQL instance was stopped and its temporary database/log
   files removed after verification. No test service remains running.
