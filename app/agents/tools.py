@@ -27,7 +27,8 @@ def safe_tools(service: FinanceService) -> dict[str, StructuredTool]:
     async def recent() -> list:
         # Strip all untrusted text fields from the model-facing tool.
         return [
-            {k: v for k, v in row.items() if k != "description"} for row in await service.recent()
+            {k: v for k, v in row.items() if k not in {"description", "merchant"}}
+            for row in await service.recent()
         ]
 
     async def budgets(period: str | None = None) -> list:

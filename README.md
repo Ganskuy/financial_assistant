@@ -178,12 +178,19 @@ Both produce an opening-balance preview without an AI call. Tap **Confirm** to i
 
 ### Commands
 
+`/history` lists confirmed transactions by when they were saved, newest first,
+including their merchant and original transaction date. Each page contains up to
+10 entries; use `/history 2` (or the next-page command in the response) for older
+entries. Newly confirmed receipts appear first even when the printed purchase
+date is earlier. Pending previews appear under `/pending`, not `/history`.
+
 ```text
 /opening 813794
 /balance
 /report 2026-10
 /visualize MONTH [YEAR]
 /history
+/history 2
 /usage
 /budget
 /budget 2026-10 | food | 1 juta

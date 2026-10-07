@@ -30,7 +30,7 @@ Every change requires Confirm. Nothing is saved from extraction alone.
 /balance YYYY-MM — monthly income minus expenses
 /report [YYYY-MM] — category report, no AI
 /visualize MONTH [YEAR] — monthly charts from confirmed records
-/history — latest 10 entries
+/history [PAGE] — confirmed entries, newest saved first; 10 per page
 /usage — global AI token allowance
 /advice [YYYY-MM] — grounded guidance
 /budget — current budget status
@@ -132,17 +132,29 @@ class BotService:
         if route.name in {"balance", "report"}:
             return {"text": format_summary(await finance.summary(route.args or None))}
         if route.name == "history":
-            rows = await finance.recent()
-            return {
-                "text": "Transaction history\n"
-                + (
-                    "\n".join(
-                        f"{r['date']} {r['type']} {idr(r['amount'])} [{r['category']}] {r['description']}"
-                        for r in rows
-                    )
-                    or "No transactions."
+            if route.args and (
+                not route.args.isascii()
+                or not route.args.isdecimal()
+                or len(route.args) > 5
+                or not 1 <= int(route.args) <= 10000
+            ):
+                raise InvalidInput("Use /history or /history PAGE (1–10000).")
+            page = int(route.args) if route.args else 1
+            rows = await finance.recent(limit=11, offset=(page - 1) * 10)
+            lines = [f"Transaction history — page {page} (newest saved first)"]
+            for r in rows[:10]:
+                merchant = f" — {r['merchant']}" if r["merchant"] else ""
+                lines.append(
+                    f"{r['date']} {r['type']} {idr(r['amount'])} [{r['category']}]"
+                    f"{merchant} — {r['description']}"
                 )
-            }
+            if not rows:
+                lines.append("No transactions." if page == 1 else "No transactions on this page.")
+            if page > 1:
+                lines.append(f"Previous: /history {page - 1}")
+            if len(rows) > 10 and page < 10000:
+                lines.append(f"Next: /history {page + 1}")
+            return {"text": "\n".join(lines)}
         if route.name == "usage":
             usage = await self.budget.usage()
             return {

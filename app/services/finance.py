@@ -19,9 +19,9 @@ class FinanceService:
         async with self.db.transaction() as session:
             return await FinanceRepository(session, self.user_id).current_balance(today())
 
-    async def recent(self) -> list[dict]:
+    async def recent(self, *, limit: int = 10, offset: int = 0) -> list[dict]:
         async with self.db.transaction() as session:
-            rows = await FinanceRepository(session, self.user_id).recent()
+            rows = await FinanceRepository(session, self.user_id).recent(limit, offset)
             return [
                 {
                     "date": r.transaction_date.isoformat(),
@@ -29,6 +29,7 @@ class FinanceService:
                     "amount": r.amount,
                     "category": r.category,
                     "description": r.description,
+                    "merchant": r.merchant_or_source,
                 }
                 for r in rows
             ]

@@ -30,6 +30,21 @@ def test_tools_cannot_accept_identity_or_sql():
         assert "user_id" not in tool.args_schema.model_json_schema()["properties"]
 
 
+async def test_recent_tool_excludes_merchant_and_description():
+    service = AsyncMock()
+    service.recent.return_value = [
+        {
+            "date": "2026-10-06",
+            "amount": 25000,
+            "merchant": "private merchant",
+            "description": "private purchase",
+        }
+    ]
+    tools = safe_tools(service)
+    recent = next(tool for name, tool in tools.items() if "recent" in name)
+    assert await recent.ainvoke({}) == [{"date": "2026-10-06", "amount": 25000}]
+
+
 def test_advisor_grounding():
     summary = {
         "period": "2026-10",

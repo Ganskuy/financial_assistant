@@ -68,18 +68,18 @@ class FinanceRepository:
             "balance": (opening.amount if opening else 0) + net,
         }
 
-    async def recent(self, limit: int = 10) -> list[Transaction]:
+    async def recent(self, limit: int = 10, offset: int = 0) -> list[Transaction]:
         return list(
             (
                 await self.session.scalars(
                     select(Transaction)
                     .where(Transaction.user_id == self.user_id)
                     .order_by(
-                        Transaction.transaction_date.desc(),
                         Transaction.created_at.desc(),
                         Transaction.id,
                     )
                     .limit(min(max(limit, 1), 20))
+                    .offset(max(offset, 0))
                 )
             ).all()
         )
