@@ -185,7 +185,9 @@ class OpenRouterClient:
                             "total_tokens": inp + out,
                             "latency_ms": round((time.monotonic() - started) * 1000),
                             "status": "ok",
-                            "prompt_version": "finance-v1",
+                            "prompt_version": "receipt-date-v2"
+                            if role == "extraction"
+                            else "finance-v1",
                             "cost": usage.get("cost"),
                             "remaining_tokens": (await self.budget.usage())["remaining"],
                         },

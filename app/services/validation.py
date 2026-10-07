@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -55,9 +56,20 @@ def parse_idr(raw: str) -> int:
 
 def validate_transaction(draft: TransactionDraft, on_date: date | None = None) -> list[str]:
     current = on_date or today()
-    if not date(2000, 1, 1) <= draft.transaction_date <= current:
+    valid_date = date(2000, 1, 1) <= draft.transaction_date <= current
+    logging.getLogger("finance").info(
+        "transaction_date_validation",
+        extra={
+            "transaction_date": draft.transaction_date.isoformat(),
+            "current_date": current.isoformat(),
+            "status": "ok" if valid_date else "rejected",
+        },
+    )
+    if not valid_date:
         raise InvalidInput(
-            "Transaction date must be between 2000-01-01 and today; future entries are not accepted."
+            "Transaction date must be between 2000-01-01 and today; future entries are not accepted. "
+            f"Extracted date: {draft.transaction_date.isoformat()}; "
+            f"today in Asia/Jakarta: {current.isoformat()}."
         )
     warnings = []
     if draft.confidence < 0.75:

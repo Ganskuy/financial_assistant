@@ -22,6 +22,9 @@ _FIELDS = frozenset(
         "error_type",
         "cost",
         "prompt_version",
+        "ocr_date_candidates",
+        "transaction_date",
+        "current_date",
     }
 )
 

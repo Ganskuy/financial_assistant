@@ -1,4 +1,5 @@
 import json
+import logging
 
 from app.agents.prompts.system import ADVISOR_PROMPT, EXTRACTION_PROMPT, OCR_PROMPT
 from app.agents.state import WorkflowState
@@ -7,7 +8,10 @@ from app.schemas.finance import OCR, Advice, Extraction
 from app.services.advice import compact_advisor_payload, make_facts, render_advice
 from app.services.finance import FinanceService, format_summary
 from app.services.pending import PendingService
+from app.services.receipt_diagnostics import receipt_date_candidates
 from app.services.validation import today, validate_transaction
+
+log = logging.getLogger("finance")
 
 
 def guarded(node):
@@ -39,6 +43,10 @@ class FinanceNodes:
             raise InvalidInput(
                 "Receipt is unreadable. Please send a sharper photo or enter the transaction as text."
             )
+        log.info(
+            "receipt_ocr_dates",
+            extra={"ocr_date_candidates": receipt_date_candidates(result.transcription)},
+        )
         return {"text": result.transcription}
 
     async def extract(self, state):
@@ -60,6 +68,11 @@ class FinanceNodes:
             or result.transaction.receipt is None
         ):
             raise InvalidModelOutput()
+        if result.transaction is not None:
+            log.info(
+                "transaction_extracted_date",
+                extra={"transaction_date": result.transaction.transaction_date.isoformat()},
+            )
         return {"extraction": result, "period": result.period}
 
     async def validate(self, state):
