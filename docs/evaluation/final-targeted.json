@@ -1,0 +1,225 @@
+{
+  "report_version": 1,
+  "date_jakarta": "2026-10-08",
+  "comparison_scope": "historical extraction/OCR boundaries and normalization; shared current transport, schemas, validator",
+  "financial_writes": false,
+  "token_accounting_writes": true,
+  "baseline_revision": null,
+  "baseline_hashes": null,
+  "current_prompt_hashes": {
+    "extraction": "6ab24b6bd483f20f0362aea2748366e5f97e0dadba43e220d971134d0f7d411a",
+    "ocr": "e5dc5a613126ce8f70ef5b81e160ea61d3a458c7757a4d46a9b966afc33f2734"
+  },
+  "dataset_hash": "c4de5a092e6f4088607ea48ee228cd5f67b12c5f1f15637a3b1a56f6daea0ae0",
+  "selected_case_ids": [
+    "generic_spbu_id",
+    "generic_spbu_en",
+    "transfer_not_spbu"
+  ],
+  "runs_per_case": 1,
+  "model": "openai/gpt-5.4-nano",
+  "model_settings": {
+    "vision_max_output_tokens": 1800,
+    "extraction_max_output_tokens": 1600,
+    "openrouter_max_attempts": 2,
+    "openrouter_timeout_seconds": 45.0
+  },
+  "process_peak_rss_bytes": 102285312,
+  "memory_scope": "whole evaluator process high-water RSS; not isolated per variant",
+  "aborted": null,
+  "planned_evaluations": 3,
+  "metrics": {
+    "current": {
+      "evaluated": 3,
+      "successful": 3,
+      "intent_match": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "amount_match": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "merchant_match": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "description_match": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "date_match": {
+        "rate": null,
+        "denominator": 0
+      },
+      "quantity_match": {
+        "rate": null,
+        "denominator": 0
+      },
+      "hallucinated_merchant": {
+        "rate": 0.0,
+        "denominator": 3
+      },
+      "unsupported_transaction": {
+        "rate": 0.0,
+        "denominator": 3
+      },
+      "success": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "business_valid": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "extraction_schema_valid": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "first_pass_success": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "structured_output_validity": {
+        "rate": 1.0,
+        "denominator": 3
+      },
+      "receipt_image_success": {
+        "rate": null,
+        "denominator": 0
+      },
+      "receipt_transcription_success": {
+        "rate": null,
+        "denominator": 0
+      },
+      "retry_frequency": 0.0,
+      "semantic_retry_frequency": 0.0,
+      "transport_retry_frequency": 0.0,
+      "latency_ms": {
+        "p50": 1521.698,
+        "p95": 2075.1071
+      },
+      "cpu_ms": {
+        "total": 141.47,
+        "p50": 36.799
+      },
+      "input_tokens": 3736,
+      "output_tokens": 205,
+      "provider_cost_usd": 0.00100345,
+      "cost_usd_per_successful_transaction": 0.0003344833333333333
+    }
+  },
+  "observations": [
+    {
+      "case_id": "generic_spbu_id",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 2136.597,
+      "cpu_ms": 71.749,
+      "input_tokens": 1246,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003342,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "generic_spbu_en",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1521.698,
+      "cpu_ms": 32.922,
+      "input_tokens": 1246,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003342,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "transfer_not_spbu",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1266.844,
+      "cpu_ms": 36.799,
+      "input_tokens": 1244,
+      "output_tokens": 69,
+      "provider_cost_usd": 0.00033505,
+      "last_stage": "complete",
+      "error_type": null
+    }
+  ]
+}

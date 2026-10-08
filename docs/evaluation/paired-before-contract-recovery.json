@@ -1,0 +1,1096 @@
+{
+  "report_version": 1,
+  "date_jakarta": "2026-10-08",
+  "comparison_scope": "historical extraction/OCR boundaries and normalization; shared current transport, schemas, validator",
+  "financial_writes": false,
+  "token_accounting_writes": true,
+  "baseline_revision": "34b136acecbbcf6d163fab092f3960fd780d7c91",
+  "baseline_hashes": {
+    "app/agents/prompts/system.py": "ef066e32136e1359266a2d68ba0d9f73dcc9768eff1c4f6260e000c5a3475f5d",
+    "app/agents/nodes/finance.py": "1fcc15ec1562adbc90862def346e217e13eb274ab3335ac9bf876687143338c5",
+    "app/telegram/client.py": "8da7e9b655c86b8f7278e0638e6a42eec8a61e276d363c70d111cc87cc4bf02e",
+    "extraction_prompt": "b0f8bb834eba91a5c2bcde93dde60851373c3f3b64d3bda635517810eb8a91a0",
+    "ocr_prompt": "e5dc5a613126ce8f70ef5b81e160ea61d3a458c7757a4d46a9b966afc33f2734"
+  },
+  "current_prompt_hashes": {
+    "extraction": "6ab24b6bd483f20f0362aea2748366e5f97e0dadba43e220d971134d0f7d411a",
+    "ocr": "e5dc5a613126ce8f70ef5b81e160ea61d3a458c7757a4d46a9b966afc33f2734"
+  },
+  "dataset_hash": "c4de5a092e6f4088607ea48ee228cd5f67b12c5f1f15637a3b1a56f6daea0ae0",
+  "selected_case_ids": [
+    "generic_spbu_id",
+    "generic_spbu_en",
+    "named_merchant",
+    "unknown_merchant",
+    "transfer_not_spbu",
+    "destination_not_merchant",
+    "unrelated_landmark",
+    "product_not_merchant",
+    "income_decimal_million",
+    "missing_amount",
+    "receipt_tax_total",
+    "receipt_discount_service"
+  ],
+  "runs_per_case": 1,
+  "model": "openai/gpt-5.4-nano",
+  "model_settings": {
+    "vision_max_output_tokens": 1800,
+    "extraction_max_output_tokens": 1600,
+    "openrouter_max_attempts": 2,
+    "openrouter_timeout_seconds": 45.0
+  },
+  "process_peak_rss_bytes": 103268352,
+  "memory_scope": "whole evaluator process high-water RSS; not isolated per variant",
+  "aborted": null,
+  "planned_evaluations": 24,
+  "metrics": {
+    "baseline": {
+      "evaluated": 12,
+      "successful": 8,
+      "intent_match": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "amount_match": {
+        "rate": 1.0,
+        "denominator": 11
+      },
+      "merchant_match": {
+        "rate": 0.9166666666666666,
+        "denominator": 12
+      },
+      "description_match": {
+        "rate": 0.6363636363636364,
+        "denominator": 11
+      },
+      "date_match": {
+        "rate": 1.0,
+        "denominator": 2
+      },
+      "quantity_match": {
+        "rate": null,
+        "denominator": 0
+      },
+      "hallucinated_merchant": {
+        "rate": 0.0,
+        "denominator": 12
+      },
+      "unsupported_transaction": {
+        "rate": 0.0,
+        "denominator": 12
+      },
+      "success": {
+        "rate": 0.6666666666666666,
+        "denominator": 12
+      },
+      "business_valid": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "extraction_schema_valid": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "first_pass_success": {
+        "rate": 0.6666666666666666,
+        "denominator": 12
+      },
+      "structured_output_validity": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "receipt_image_success": {
+        "rate": null,
+        "denominator": 0
+      },
+      "receipt_transcription_success": {
+        "rate": 0.5,
+        "denominator": 2
+      },
+      "retry_frequency": 0.0,
+      "semantic_retry_frequency": 0.0,
+      "transport_retry_frequency": 0.0,
+      "latency_ms": {
+        "p50": 1462.232,
+        "p95": 2352.2246499999997
+      },
+      "cpu_ms": {
+        "total": 416.12699999999995,
+        "p50": 32.358000000000004
+      },
+      "input_tokens": 10176,
+      "output_tokens": 878,
+      "provider_cost_usd": 0.0031327000000000004,
+      "cost_usd_per_successful_transaction": 0.0004475285714285715
+    },
+    "current": {
+      "evaluated": 12,
+      "successful": 10,
+      "intent_match": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "amount_match": {
+        "rate": 0.9090909090909091,
+        "denominator": 11
+      },
+      "merchant_match": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "description_match": {
+        "rate": 0.8181818181818182,
+        "denominator": 11
+      },
+      "date_match": {
+        "rate": 1.0,
+        "denominator": 2
+      },
+      "quantity_match": {
+        "rate": null,
+        "denominator": 0
+      },
+      "hallucinated_merchant": {
+        "rate": 0.0,
+        "denominator": 12
+      },
+      "unsupported_transaction": {
+        "rate": 0.0,
+        "denominator": 12
+      },
+      "success": {
+        "rate": 0.8333333333333334,
+        "denominator": 12
+      },
+      "business_valid": {
+        "rate": 0.9166666666666666,
+        "denominator": 12
+      },
+      "extraction_schema_valid": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "first_pass_success": {
+        "rate": 0.8333333333333334,
+        "denominator": 12
+      },
+      "structured_output_validity": {
+        "rate": 1.0,
+        "denominator": 12
+      },
+      "receipt_image_success": {
+        "rate": null,
+        "denominator": 0
+      },
+      "receipt_transcription_success": {
+        "rate": 1.0,
+        "denominator": 2
+      },
+      "retry_frequency": 0.0,
+      "semantic_retry_frequency": 0.0,
+      "transport_retry_frequency": 0.0,
+      "latency_ms": {
+        "p50": 1403.2905,
+        "p95": 1816.6535999999999
+      },
+      "cpu_ms": {
+        "total": 382.662,
+        "p50": 33.5075
+      },
+      "input_tokens": 15036,
+      "output_tokens": 825,
+      "provider_cost_usd": 0.00403845,
+      "cost_usd_per_successful_transaction": 0.00044871666666666663
+    }
+  },
+  "observations": [
+    {
+      "case_id": "generic_spbu_id",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": false,
+      "description_match": false,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 2504.43,
+      "cpu_ms": 69.103,
+      "input_tokens": 844,
+      "output_tokens": 70,
+      "provider_cost_usd": 0.0002563,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "generic_spbu_id",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1525.775,
+      "cpu_ms": 33.759,
+      "input_tokens": 1246,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003342,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "generic_spbu_en",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1534.753,
+      "cpu_ms": 32.41,
+      "input_tokens": 1246,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003342,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "generic_spbu_en",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": false,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 1428.15,
+      "cpu_ms": 33.014,
+      "input_tokens": 844,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0002538,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "named_merchant",
+      "kind": "text",
+      "provenance": "existing_project_example",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1487.484,
+      "cpu_ms": 32.403,
+      "input_tokens": 841,
+      "output_tokens": 67,
+      "provider_cost_usd": 0.00025195,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "named_merchant",
+      "kind": "text",
+      "provenance": "existing_project_example",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1275.543,
+      "cpu_ms": 27.708,
+      "input_tokens": 1243,
+      "output_tokens": 67,
+      "provider_cost_usd": 0.00033235,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "unknown_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1328.632,
+      "cpu_ms": 31.846,
+      "input_tokens": 1241,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003332,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "unknown_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1340.895,
+      "cpu_ms": 29.849,
+      "input_tokens": 839,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0002528,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "transfer_not_spbu",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1436.98,
+      "cpu_ms": 33.584,
+      "input_tokens": 842,
+      "output_tokens": 70,
+      "provider_cost_usd": 0.0002559,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "transfer_not_spbu",
+      "kind": "text",
+      "provenance": "user_provided_example",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": false,
+      "merchant_match": true,
+      "description_match": false,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": false,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 1016.528,
+      "cpu_ms": 21.723,
+      "input_tokens": 1244,
+      "output_tokens": 20,
+      "provider_cost_usd": 0.0002738,
+      "last_stage": "extraction",
+      "error_type": "InvalidModelOutput"
+    },
+    {
+      "case_id": "destination_not_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1221.932,
+      "cpu_ms": 28.108,
+      "input_tokens": 1242,
+      "output_tokens": 71,
+      "provider_cost_usd": 0.00033715,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "destination_not_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1610.44,
+      "cpu_ms": 32.94,
+      "input_tokens": 840,
+      "output_tokens": 70,
+      "provider_cost_usd": 0.0002555,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "unrelated_landmark",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": false,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 1339.477,
+      "cpu_ms": 32.75,
+      "input_tokens": 842,
+      "output_tokens": 71,
+      "provider_cost_usd": 0.00025715,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "unrelated_landmark",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": false,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 1262.729,
+      "cpu_ms": 33.759,
+      "input_tokens": 1244,
+      "output_tokens": 71,
+      "provider_cost_usd": 0.00033755,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "product_not_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1430.386,
+      "cpu_ms": 33.731,
+      "input_tokens": 1240,
+      "output_tokens": 67,
+      "provider_cost_usd": 0.00033175,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "product_not_merchant",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 2227.693,
+      "cpu_ms": 29.95,
+      "input_tokens": 838,
+      "output_tokens": 67,
+      "provider_cost_usd": 0.00025135,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "income_decimal_million",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1358.739,
+      "cpu_ms": 30.826,
+      "input_tokens": 839,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0002528,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "income_decimal_million",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1376.195,
+      "cpu_ms": 34.451,
+      "input_tokens": 1241,
+      "output_tokens": 68,
+      "provider_cost_usd": 0.0003332,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "missing_amount",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": false,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": null,
+      "merchant_match": true,
+      "description_match": null,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1764.495,
+      "cpu_ms": 35.4,
+      "input_tokens": 1239,
+      "output_tokens": 20,
+      "provider_cost_usd": 0.0002728,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "missing_amount",
+      "kind": "text",
+      "provenance": "synthetic",
+      "expected_transaction": false,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": null,
+      "merchant_match": true,
+      "description_match": null,
+      "date_match": null,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1120.089,
+      "cpu_ms": 32.221,
+      "input_tokens": 837,
+      "output_tokens": 20,
+      "provider_cost_usd": 0.0001924,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "receipt_tax_total",
+      "kind": "receipt_transcription",
+      "provenance": "synthetic_transcription",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": true,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 2175.321,
+      "cpu_ms": 32.313,
+      "input_tokens": 883,
+      "output_tokens": 117,
+      "provider_cost_usd": 0.00032285,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "receipt_tax_total",
+      "kind": "receipt_transcription",
+      "provenance": "synthetic_transcription",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": true,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1880.403,
+      "cpu_ms": 33.284,
+      "input_tokens": 1303,
+      "output_tokens": 118,
+      "provider_cost_usd": 0.0004081,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "receipt_discount_service",
+      "kind": "receipt_transcription",
+      "provenance": "synthetic_transcription",
+      "expected_transaction": true,
+      "variant": "current",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": true,
+      "date_match": true,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": true,
+      "success": true,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": true,
+      "latency_ms": 1719.672,
+      "cpu_ms": 36.483,
+      "input_tokens": 1307,
+      "output_tokens": 119,
+      "provider_cost_usd": 0.00041015,
+      "last_stage": "complete",
+      "error_type": null
+    },
+    {
+      "case_id": "receipt_discount_service",
+      "kind": "receipt_transcription",
+      "provenance": "synthetic_transcription",
+      "expected_transaction": true,
+      "variant": "baseline",
+      "run": 1,
+      "intent_match": true,
+      "amount_match": true,
+      "merchant_match": true,
+      "description_match": false,
+      "date_match": true,
+      "quantity_match": null,
+      "hallucinated_merchant": false,
+      "unsupported_transaction": false,
+      "semantic_success": false,
+      "success": false,
+      "business_valid": true,
+      "extraction_schema_valid": true,
+      "structured_calls": [
+        {
+          "role": "extraction",
+          "structured_valid": true
+        }
+      ],
+      "semantic_retries": 0,
+      "transport_retries": 0,
+      "http_attempts": 1,
+      "first_pass_success": false,
+      "latency_ms": 1584.439,
+      "cpu_ms": 27.174,
+      "input_tokens": 887,
+      "output_tokens": 122,
+      "provider_cost_usd": 0.0003299,
+      "last_stage": "complete",
+      "error_type": null
+    }
+  ]
+}

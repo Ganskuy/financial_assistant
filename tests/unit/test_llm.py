@@ -126,3 +126,77 @@ def test_schema_and_reservation_include_full_input():
         "schema": schema,
     }
     assert reservation_bound(payload, 0) > 4096 + 500 + 400
+
+
+@pytest.mark.parametrize(
+    "finish, message, reason, retryable",
+    [
+        ("stop", {"content": None, "refusal": "private refusal"}, "refusal", False),
+        ("content_filter", {"content": ""}, "refusal", False),
+        ("length", {"content": "{}"}, "schema_or_incomplete", True),
+        ("stop", {"content": ""}, "schema_or_incomplete", True),
+        ("stop", {"content": "{}", "tool_calls": [{}]}, "schema_or_incomplete", True),
+        ("stop", [], "schema_or_incomplete", True),
+    ],
+)
+async def test_interrupted_refused_and_malformed_responses(
+    settings, budget, finish, message, reason, retryable
+):
+    raw = successful()
+    raw["choices"] = [{"finish_reason": finish, "message": message}]
+    handler = AsyncMock(return_value=httpx.Response(200, json=raw))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(InvalidModelOutput) as caught:
+            await OpenRouterClient(settings, budget, http).structured("vision", "OCR", "data", OCR)
+    assert caught.value.reason == reason
+    assert caught.value.retryable is retryable
+    assert handler.await_count == 1
+    budget.reconcile.assert_awaited_once()
+
+
+@pytest.mark.parametrize("header", ["15", "120"])
+async def test_long_retry_after_never_retries_early(settings, budget, monkeypatch, header):
+    sleep = AsyncMock()
+    monkeypatch.setattr("app.llm.client.asyncio.sleep", sleep)
+    handler = AsyncMock(return_value=httpx.Response(429, headers={"Retry-After": header}))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(ModelUnavailable):
+            await OpenRouterClient(settings, budget, http).structured("vision", "OCR", "data", OCR)
+    assert handler.await_count == 1
+    sleep.assert_not_awaited()
+
+
+def test_retry_after_http_date_and_bad_values():
+    from datetime import UTC, datetime, timedelta
+    from email.utils import format_datetime
+
+    from app.llm.client import retry_delay
+
+    assert 58 < retry_delay(format_datetime(datetime.now(UTC) + timedelta(seconds=60))) <= 60
+    for value in ["nonsense", "nan", "inf", "-1"]:
+        assert retry_delay(value) == 0
+
+
+async def test_long_json_envelope_does_not_reject_valid_source(settings, budget):
+    source = "x" * 6000
+    data = json.dumps({"untrusted_text": source})
+    handler = AsyncMock(
+        return_value=httpx.Response(
+            200, json=successful({"intent": "unknown", "transaction": None, "period": None})
+        )
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        await OpenRouterClient(settings, budget, http).structured(
+            "extraction", "extract", data, Extraction
+        )
+    assert handler.await_count == 1
+
+
+async def test_transient_attempt_limit_is_enforced(settings, budget, monkeypatch):
+    monkeypatch.setattr("app.llm.client.asyncio.sleep", AsyncMock())
+    handler = AsyncMock(return_value=httpx.Response(503))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(ModelUnavailable):
+            await OpenRouterClient(settings, budget, http).structured("vision", "OCR", "data", OCR)
+    assert handler.await_count == settings.openrouter_max_attempts == 2
+    assert budget.unknown.await_count == 2

@@ -25,6 +25,20 @@ _FIELDS = frozenset(
         "ocr_date_candidates",
         "transaction_date",
         "current_date",
+        "input_source",
+        "failure_stage",
+        "reason",
+        "attempt",
+        "recovery_attempts",
+        "corrections",
+        "image_width",
+        "image_height",
+        "preprocessed",
+        "source_width",
+        "source_height",
+        "image_resized",
+        "image_alpha_composited",
+        "image_oriented",
     }
 )
 

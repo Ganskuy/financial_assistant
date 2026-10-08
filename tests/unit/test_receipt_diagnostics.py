@@ -95,7 +95,7 @@ async def test_receipt_failures_never_stage(settings, failure):
     if failure == "unreadable":
         llm.structured.return_value = OCR(readable=False, transcription="Unreadable")
     elif failure == "invalid_json":
-        llm.structured.side_effect = [readable, InvalidModelOutput()]
+        llm.structured.side_effect = [readable, InvalidModelOutput(), InvalidModelOutput()]
     else:
         llm.structured.side_effect = [
             readable,

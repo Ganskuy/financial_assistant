@@ -1,3 +1,5 @@
+import logging
+import time
 from datetime import date
 
 from langsmith import tracing_context
@@ -58,8 +60,20 @@ class BotService:
         self.visualization = visualization_graph(VisualizationNodes(db, settings, llm))
 
     async def process(self, update: Update) -> dict:
-        with tracing_context(enabled=False):
-            return await self._process(update)
+        started = time.monotonic()
+        try:
+            with tracing_context(enabled=False):
+                return await self._process(update)
+        finally:
+            logging.getLogger("finance").info(
+                "workflow_duration",
+                extra={
+                    "latency_ms": round((time.monotonic() - started) * 1000),
+                    "input_source": "receipt"
+                    if update.message and (update.message.photo or update.message.document)
+                    else "text",
+                },
+            )
 
     async def _process(self, update: Update) -> dict:
         telegram_id, _, message_id = update.identity()

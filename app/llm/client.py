@@ -2,8 +2,11 @@ import asyncio
 import base64
 import json
 import logging
+import math
 import random
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import TypeVar
 
 import httpx
@@ -19,6 +22,19 @@ from app.llm.token_budget import TokenBudget
 
 T = TypeVar("T", bound=BaseModel)
 log = logging.getLogger("finance")
+
+
+def retry_delay(value: str) -> float:
+    """Honor seconds or HTTP dates; long delays fail safely instead of retrying early."""
+    try:
+        delay = float(value)
+    except ValueError:
+        try:
+            parsed = parsedate_to_datetime(value)
+            delay = (parsed - datetime.now(UTC)).total_seconds()
+        except (ValueError, TypeError, OverflowError):
+            return 0.0
+    return max(0.0, delay) if math.isfinite(delay) else 0.0
 
 
 def strict_json_schema(schema: type[BaseModel]) -> dict:
@@ -67,14 +83,16 @@ class OpenRouterClient:
     async def structured(
         self, role: Role, system: str, data: str, schema: type[T], image: bytes | None = None
     ) -> T:
-        if len(data) > 6000:
-            raise InvalidModelOutput()
+        # 6000 source characters can expand sixfold when JSON-escaped. The source
+        # limit is enforced by the extraction boundary; include the JSON envelope.
+        if len(data) > (36_100 if role == "extraction" else 6000):
+            raise InvalidModelOutput("input_too_long", retryable=False)
         selected = profile(self.settings, role)
         # LangChain messages and Runnable wrap the only permitted model transport.
         content: str | list = data
         if image is not None:
             if role != "vision":
-                raise InvalidModelOutput()
+                raise InvalidModelOutput("unexpected_image", retryable=False)
             content = [
                 {"type": "text", "text": data},
                 {
@@ -119,6 +137,10 @@ class OpenRouterClient:
             raw = await RunnableLambda(invoke).ainvoke(payload)
         try:
             choice = raw["choices"][0]
+            if not isinstance(choice, dict) or not isinstance(choice.get("message"), dict):
+                raise ValueError("Invalid message shape")
+            if choice["message"].get("refusal") or choice.get("finish_reason") == "content_filter":
+                raise InvalidModelOutput("refusal", retryable=False)
             if choice.get("finish_reason") != "stop" or choice["message"].get("tool_calls"):
                 raise ValueError("Incomplete or unexpected response")
             value = choice["message"]["content"]
@@ -126,7 +148,10 @@ class OpenRouterClient:
                 raise ValueError("Empty response")
             return schema.model_validate_json(value)
         except (KeyError, IndexError, TypeError, ValueError, ValidationError) as exc:
-            raise InvalidModelOutput() from exc
+            log.warning(
+                "structured_output_rejected", extra={"role": role, "reason": "schema_or_incomplete"}
+            )
+            raise InvalidModelOutput("schema_or_incomplete") from exc
 
     async def _request(self, payload: dict, role: Role, amount: int) -> dict:
         for attempt in range(self.settings.openrouter_max_attempts):
@@ -148,15 +173,19 @@ class OpenRouterClient:
                         timeout=self.settings.openrouter_timeout_seconds,
                     )
                 if response.status_code != 200:
-                    transient = response.status_code == 429 or response.status_code >= 500
-                    try:
-                        retry_after = min(
-                            5.0, max(0.0, float(response.headers.get("retry-after", 0)))
-                        )
-                    except ValueError:
-                        retry_after = 0.0
+                    transient = response.status_code in {408, 429} or response.status_code >= 500
+                    retry_after = retry_delay(response.headers.get("retry-after", "0"))
                     await self.budget.unknown(reservation)
-                    if not transient:
+                    if not transient or retry_after > 5:
+                        log.warning(
+                            "llm_failure",
+                            extra={
+                                "role": role,
+                                "status": "failed",
+                                "attempt": attempt + 1,
+                                "reason": "retry_later" if retry_after > 5 else "http_permanent",
+                            },
+                        )
                         raise ModelUnavailable()
                 else:
                     try:
@@ -168,12 +197,13 @@ class OpenRouterClient:
                             or type(out) is not int
                             or inp < 0
                             or out < 0
+                            or type(usage["total_tokens"]) is not int
                             or usage["total_tokens"] != inp + out
                         ):
                             raise ValueError("Invalid usage metadata")
                     except (ValueError, KeyError, TypeError) as exc:
                         await self.budget.unknown(reservation)
-                        raise InvalidModelOutput() from exc
+                        raise InvalidModelOutput("invalid_usage", retryable=False) from exc
                     await self.budget.reconcile(reservation, inp, out)
                     log.info(
                         "llm_call",
@@ -185,7 +215,7 @@ class OpenRouterClient:
                             "total_tokens": inp + out,
                             "latency_ms": round((time.monotonic() - started) * 1000),
                             "status": "ok",
-                            "prompt_version": "receipt-date-v2"
+                            "prompt_version": "extraction-v3"
                             if role == "extraction"
                             else "finance-v1",
                             "cost": usage.get("cost"),
@@ -211,6 +241,7 @@ class OpenRouterClient:
                     "role": role,
                     "model": payload["model"],
                     "status": "transient" if transient else "failed",
+                    "attempt": attempt + 1,
                 },
             )
             if not transient or attempt + 1 == self.settings.openrouter_max_attempts:

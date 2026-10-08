@@ -58,7 +58,9 @@ One API container and PostgreSQL. No Redis, queue server, vector database, RAG, 
 | Recognized report/advice question | Scoped summaries → advisor → checked fact references | 1, or 0 when empty |
 | Other ambiguous natural language | Extraction may select report/advice → advisor | Up to 2 |
 
-Transient retries can add one model call if another full reservation fits. No model fallback chain is enabled. All calls, including live evals and retries, share the same global budget.
+Each structured request permits at most two HTTP attempts for transient errors. Transaction extraction additionally permits one targeted recovery shared across OCR and extraction for malformed or inconsistent output; valid text still uses one request and valid receipts use two. Every attempt needs a full token reservation. No model fallback chain is enabled. All calls, including live evals and retries, share the same global budget.
+
+Extraction now distinguishes explicit named merchants, generic businesses such as SPBU, products, destinations and unknown merchants. Receipt ingestion preserves transparent PNG text by compositing onto white. See [extraction changes and measured verification](docs/EXTRACTION_IMPROVEMENTS.md) and [reproducible evaluations](docs/EXTRACTION_EVALUATION.md).
 
 ### Backend aggregation and model efficiency
 

@@ -2,7 +2,9 @@ import asyncio
 import base64
 import binascii
 import io
+import logging
 import re
+import time
 import warnings
 
 import httpx
@@ -10,6 +12,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.config import Settings
 from app.core.errors import InvalidInput, TelegramUnavailable
+
+log = logging.getLogger("finance")
 
 
 class TelegramClient:
@@ -90,10 +94,31 @@ class TelegramClient:
     async def receipt(
         self, file_id: str, declared_size: int | None, mime: str | None = None
     ) -> bytes:
+        try:
+            content = await self._download_receipt(file_id, declared_size, mime)
+        except (InvalidInput, TelegramUnavailable) as exc:
+            log.warning(
+                "receipt_ingestion_rejected",
+                extra={
+                    "workflow": "receipt",
+                    "status": "rejected",
+                    "failure_stage": "ingestion",
+                    "reason": "download_failed"
+                    if isinstance(exc, TelegramUnavailable)
+                    else "unsupported_input",
+                },
+            )
+            raise
+        return await asyncio.to_thread(normalize_image, content)
+
+    async def _download_receipt(
+        self, file_id: str, declared_size: int | None, mime: str | None
+    ) -> bytes:
         limit = self.settings.max_receipt_file_size_mb * 1024 * 1024
         if declared_size is not None and declared_size > limit:
             raise InvalidInput("Receipt image is too large.")
-        if mime and mime not in {"image/jpeg", "image/png"}:
+        media_type = (mime or "").split(";", 1)[0].strip().lower()
+        if media_type and media_type not in {"image/jpeg", "image/png", "application/octet-stream"}:
             raise InvalidInput("Only JPEG and PNG receipt images are supported.")
         metadata = await self.call("getFile", {"file_id": file_id})
         if metadata.get("file_size", 0) > limit:
@@ -119,7 +144,9 @@ class TelegramClient:
                 ) as response:
                     if response.status_code != 200:
                         raise TelegramUnavailable("Receipt download failed")
-                    media_type = response.headers.get("content-type", "").split(";")[0].lower()
+                    media_type = (
+                        response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+                    )
                     if media_type not in {"image/jpeg", "image/png", "application/octet-stream"}:
                         raise InvalidInput("Unsupported receipt content type.")
                     async for chunk in response.aiter_bytes(65536):
@@ -128,10 +155,11 @@ class TelegramClient:
                             raise InvalidInput("Receipt image is too large.")
         except (httpx.HTTPError, TimeoutError) as exc:
             raise TelegramUnavailable("Receipt download failed") from exc
-        return await asyncio.to_thread(normalize_image, bytes(content))
+        return bytes(content)
 
 
 def normalize_image(raw: bytes) -> bytes:
+    started = time.perf_counter()
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
@@ -142,11 +170,53 @@ def normalize_image(raw: bytes) -> bytes:
                     raise InvalidInput("Receipt image resolution is too large.")
                 original.verify()
             with Image.open(io.BytesIO(raw)) as original:
-                image = ImageOps.exif_transpose(original).convert("RGB")
+                oriented = original.getexif().get(274, 1) in {2, 3, 4, 5, 6, 7, 8}
+                image = ImageOps.exif_transpose(original)
+                transparent = image.mode in {"RGBA", "LA"} or "transparency" in image.info
+                # Dropping alpha directly makes black text on a transparent canvas
+                # disappear. Composite onto paper white only for transparent inputs.
+                image = image.convert("RGBA" if transparent else "RGB")
+                resized = max(image.size) > 1024
                 image.thumbnail((1024, 1024))
+                if transparent:
+                    paper = Image.new("RGB", image.size, "white")
+                    paper.paste(image, mask=image.getchannel("A"))
+                    image = paper
                 output = io.BytesIO()
                 image.save(output, format="JPEG", quality=90)
+                operations = [
+                    name
+                    for name, applied in (
+                        ("orientation", oriented),
+                        ("resize", resized),
+                        ("alpha_composite", transparent),
+                    )
+                    if applied
+                ]
+                log.info(
+                    "receipt_image_processed",
+                    extra={
+                        "workflow": "receipt",
+                        "status": "ok",
+                        "image_width": image.width,
+                        "image_height": image.height,
+                        "preprocessed": bool(operations),
+                        "reason": ",".join(operations) or "format_normalization",
+                        "latency_ms": round((time.perf_counter() - started) * 1000),
+                    },
+                )
                 return output.getvalue()
+    except InvalidInput:
+        log.warning(
+            "receipt_image_rejected",
+            extra={
+                "workflow": "receipt",
+                "status": "rejected",
+                "failure_stage": "image_normalization",
+                "reason": "unsupported_image",
+            },
+        )
+        raise
     except (
         UnidentifiedImageError,
         OSError,
@@ -154,4 +224,13 @@ def normalize_image(raw: bytes) -> bytes:
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
     ) as exc:
+        log.warning(
+            "receipt_image_rejected",
+            extra={
+                "workflow": "receipt",
+                "status": "rejected",
+                "failure_stage": "image_normalization",
+                "reason": "invalid_image",
+            },
+        )
         raise InvalidInput("The receipt image is invalid or unsafe.") from exc

@@ -26,7 +26,9 @@ class ModelUnavailable(SafeError):
 
 
 class InvalidModelOutput(SafeError):
-    def __init__(self) -> None:
+    def __init__(self, reason: str = "invalid_output", *, retryable: bool = True) -> None:
+        self.reason = reason
+        self.retryable = retryable
         super().__init__(
             "AI output could not be validated. Please use clearer text or a sharper receipt photo. No financial record was written."
         )
