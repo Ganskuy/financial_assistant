@@ -48,7 +48,7 @@ One API container and PostgreSQL. No Redis, queue server, vector database, RAG, 
 
 | Input | Flow | Expected AI calls |
 |---|---|---:|
-| `/balance`, `/history`, `/usage`, `/help` | SQL/static response | 0 |
+| `/balance`, `/history`, `/remove`, `/usage`, `/help` | SQL/static response | 0 |
 | `/report [YYYY-MM]` | SQL category aggregation | 0 |
 | `/visualize MONTH [YEAR]` | SQL aggregation → validated chart spec → PNG → Telegram | 0 |
 | `/budget`, `/savings`, goal/budget commands | SQL or validated pending change | 0 |
@@ -180,6 +180,28 @@ Both produce an opening-balance preview without an AI call. Tap **Confirm** to i
 
 ### Commands
 
+`/remove expenses` or `/remove income` shows your latest 10 active entries of that
+specific type, ordered by when they were saved. The aliases `\remove expenses`
+and `\remove income` also work. Tap **Remove #N**, review the selected entry, then
+**Confirm** or **Cancel**. Selection alone changes no financial totals. Buttons
+stay tied to their original entries even if new transactions arrive; selections
+expire after the normal pending TTL and can be reopened with `/pending`.
+
+Removal excludes the entry from history, balances, reports, budget spending,
+charts, duplicate warnings, and advisor facts. It does not delete budgets or
+change savings earmarks or opening money. The original transaction and receipt
+items remain in the immutable ledger, with a separate immutable removal audit
+record; this is a logical deletion, not permanent erasure. Repeated confirmation
+cannot remove twice, and another user's buttons cannot authorize a removal.
+Removal uses no model calls. Removing all entries does not permit setting a new
+opening balance after transactions have existed.
+
+For an existing installation, stop the API/workers, activate `envir`, run
+`alembic upgrade head` (migration `0004`), then restart the API/workers and check
+`/ready`. Do not run the updated code against migration `0003`. Downgrade refuses
+when removal operations or audit records exist, to prevent silently restoring
+removed entries.
+
 `/history` lists confirmed transactions by when they were saved, newest first,
 including their merchant and original transaction date. Each page contains up to
 10 entries; use `/history 2` (or the next-page command in the response) for older
@@ -193,6 +215,8 @@ date is earlier. Pending previews appear under `/pending`, not `/history`.
 /visualize MONTH [YEAR]
 /history
 /history 2
+/remove expenses
+/remove income
 /usage
 /budget
 /budget 2026-10 | food | 1 juta
@@ -287,7 +311,9 @@ pytest -q
 
 CI provisions PostgreSQL 16, applies migrations, checks model/schema drift, runs lint/format checks, executes the full suite, and builds the Docker image. Real provider calls are never part of CI.
 
-Final local verification on 2026-10-06: **173 tests passed**, including 50 visualization tests and the full existing regression suite, using an isolated PostgreSQL 14.18 database with mocked external APIs. Lint, formatting, dependency consistency, migration-drift checks, and Compose validation passed. Live Telegram delivery and a local Docker image build were not verified; Docker was not running. See [visualization verification details](docs/VISUALIZE.md).
+**Removal feature verification (2026-10-10):** 343 tests passed with no skips against a disposable PostgreSQL database, including user isolation, concurrent confirmation, stale selections, aggregate consistency, and the mocked webhook/worker flow. Lint, formatting, dependency checks, migration upgrade/downgrade/upgrade, schema-drift checks, destructive-downgrade refusal, and the Docker image build passed. Live Telegram delivery was not exercised.
+
+Earlier local verification on 2026-10-06: **173 tests passed**, including 50 visualization tests and the full existing regression suite, using an isolated PostgreSQL 14.18 database with mocked external APIs. Lint, formatting, dependency consistency, migration-drift checks, and Compose validation passed. Live Telegram delivery and a local Docker image build were not verified; Docker was not running. See [visualization verification details](docs/VISUALIZE.md).
 
 Optional, billed extraction evaluation against the golden fixtures:
 

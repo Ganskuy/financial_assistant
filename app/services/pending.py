@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from pydantic import ValidationError
 from sqlalchemy import or_, select, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.db import Database
@@ -19,9 +20,19 @@ from app.models.tables import (
     SavingsGoal,
     Transaction,
     TransactionItem,
+    TransactionRemoval,
     User,
+    active_transaction,
 )
-from app.schemas.finance import BudgetDraft, GoalDraft, OpeningDraft, SavingDraft, TransactionDraft
+from app.repositories.finance import FinanceRepository
+from app.schemas.finance import (
+    BudgetDraft,
+    GoalDraft,
+    OpeningDraft,
+    RemovalDraft,
+    SavingDraft,
+    TransactionDraft,
+)
 from app.services.validation import idr, parse_idr, parse_opening_idr, today, validate_transaction
 
 SCHEMAS = {
@@ -30,6 +41,7 @@ SCHEMAS = {
     "goal": GoalDraft,
     "saving": SavingDraft,
     "opening": OpeningDraft,
+    "removal": RemovalDraft,
 }
 EDITABLE = {
     "transaction": {"amount", "transaction_date", "merchant", "description", "category"},
@@ -97,6 +109,7 @@ class PendingService:
                     select(Transaction.id)
                     .where(
                         Transaction.user_id == self.user_id,
+                        active_transaction(),
                         Transaction.transaction_date
                         == date.fromisoformat(payload["transaction_date"]),
                         Transaction.amount == payload["amount"],
@@ -137,15 +150,105 @@ class PendingService:
             if p.status == "editing":
                 p.status = "pending"
                 p.version += 1
-            buttons = []
-            for action in ("confirm", "edit", "cancel"):
-                token = secrets.token_urlsafe(18)
-                session.add(
-                    CallbackAction(token=token, pending_id=p.id, action=action, version=p.version)
+            return await self._preview(session, p)
+
+    async def removal_choices(self, kind: str, update_id: int, message_id: int) -> dict:
+        async with self.db.transaction() as session:
+            rows = await FinanceRepository(session, self.user_id).recent(kind=kind)
+        if not rows:
+            return {"text": f"No {kind} entries to remove."}
+        p = await self.create(
+            "removal",
+            {"type": kind, "candidates": [str(r.id) for r in rows]},
+            update_id,
+            message_id,
+            "command",
+        )
+        return await self.preview(p.id)
+
+    async def _removal_target(
+        self, session: AsyncSession, p: PendingTransaction, target_id: str | UUID | None
+    ) -> Transaction:
+        if not target_id or str(target_id) not in p.payload["candidates"]:
+            raise NotFound()
+        row = await session.scalar(
+            select(Transaction).where(
+                Transaction.id == UUID(str(target_id)),
+                Transaction.user_id == self.user_id,
+                Transaction.type == p.payload["type"],
+                active_transaction(),
+            )
+        )
+        if row is None:
+            raise InvalidInput(
+                "This entry has already been removed or is unavailable. Use /remove again."
+            )
+        return row
+
+    async def _preview(self, session: AsyncSession, p: PendingTransaction) -> dict:
+        def button(action: str, label: str | None = None, target: UUID | None = None) -> dict:
+            token = secrets.token_urlsafe(18)
+            session.add(
+                CallbackAction(
+                    token=token,
+                    pending_id=p.id,
+                    action=action,
+                    version=p.version,
+                    target_id=target,
                 )
-                buttons.append({"text": action.title(), "callback_data": token})
-            text = preview_text(p)
-            return {"text": text, "reply_markup": {"inline_keyboard": [buttons]}}
+            )
+            return {"text": label or action.title(), "callback_data": token}
+
+        if p.kind == "removal":
+            if p.payload.get("selected"):
+                try:
+                    row = await self._removal_target(session, p, p.payload["selected"])
+                except InvalidInput:
+                    return {
+                        "text": "This entry has already been removed or is unavailable. Cancel this request and use /remove again.",
+                        "reply_markup": {"inline_keyboard": [[button("cancel")]]},
+                    }
+                text = (
+                    "Remove this entry?\n"
+                    + self._entry_text(row, full=True)
+                    + "\nConfirm removes it from history, balances, reports, budgets and charts. "
+                    "An internal audit record is retained."
+                )
+                keyboard = [[button("confirm"), button("cancel")]]
+            else:
+                rows = (
+                    await session.scalars(
+                        select(Transaction).where(
+                            Transaction.id.in_([UUID(i) for i in p.payload["candidates"]]),
+                            Transaction.user_id == self.user_id,
+                            Transaction.type == p.payload["type"],
+                            active_transaction(),
+                        )
+                    )
+                ).all()
+                by_id = {str(row.id): row for row in rows}
+                text = f"Choose a {p.payload['type']} to remove (latest 10 when requested):"
+                keyboard = []
+                for i, target in enumerate(p.payload["candidates"], 1):
+                    if target in by_id:
+                        row = by_id[target]
+                        text += f"\n{i}. {self._entry_text(row)}"
+                        keyboard.append([button("select", f"Remove #{i}", row.id)])
+                if not rows:
+                    text += "\nNo remaining entries in this selection. Use /remove again."
+                keyboard.append([button("cancel")])
+            text += f"\nExpires: {p.expires_at.astimezone(ZoneInfo('Asia/Jakarta')).isoformat()}"
+            return {"text": text, "reply_markup": {"inline_keyboard": keyboard}}
+        buttons = [button(action) for action in ("confirm", "edit", "cancel")]
+        return {"text": preview_text(p), "reply_markup": {"inline_keyboard": [buttons]}}
+
+    @staticmethod
+    def _entry_text(row: Transaction, *, full: bool = False) -> str:
+        # Bound list text; the Telegram client chunks long messages safely.
+        return (
+            f"{row.transaction_date} {row.type} {idr(row.amount)} [{row.category}]"
+            f" — {(row.merchant_or_source or '-')[: 120 if full else 60]} — {row.description[: 240 if full else 120]}"
+        )
 
     @staticmethod
     def _active(p: PendingTransaction | None) -> None:
@@ -169,7 +272,7 @@ class PendingService:
                 raise NotFound()
             p, action = pair
             if p.status == "confirmed":
-                return {"text": "Already confirmed. No duplicate record was created."}
+                return {"text": "Already confirmed. No further changes were made."}
             self._active(p)
             if action.version != p.version:
                 raise NotFound()
@@ -177,7 +280,16 @@ class PendingService:
                 p.status = "cancelled"
                 p.version += 1
                 return {"text": "Cancelled. No financial record was written."}
+            if action.action == "select":
+                if p.kind != "removal" or p.payload.get("selected"):
+                    raise NotFound()
+                row = await self._removal_target(session, p, action.target_id)
+                p.payload = {**p.payload, "selected": str(row.id)}
+                p.version += 1
+                return await self._preview(session, p)
             if action.action == "edit":
+                if p.kind == "removal":
+                    raise NotFound()
                 # Keep exactly one editing target per user.
                 await session.execute(
                     update(PendingTransaction)
@@ -200,11 +312,24 @@ class PendingService:
             await self._commit(session, p, payload)
             p.status = "confirmed"
             p.version += 1
-            return {"text": "Confirmed and saved."}
+            return {
+                "text": "Confirmed. Entry removed; balances and reports now exclude it."
+                if p.kind == "removal"
+                else "Confirmed and saved."
+            }
 
     async def _commit(self, session, p: PendingTransaction, data: dict) -> None:
         await self._check_opening_policy(session, p.kind, data)
-        if p.kind == "opening":
+        if p.kind == "removal":
+            row = await self._removal_target(session, p, data["selected"])
+            session.add(
+                TransactionRemoval(
+                    transaction_id=row.id,
+                    user_id=self.user_id,
+                    pending_id=p.id,
+                )
+            )
+        elif p.kind == "opening":
             session.add(
                 OpeningBalance(
                     user_id=self.user_id,

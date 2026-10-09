@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
@@ -120,3 +121,9 @@ class Advice(StrictSchema):
 class OpeningDraft(StrictSchema):
     amount: NonnegativeMoney
     as_of: date
+
+
+class RemovalDraft(StrictSchema):
+    type: Literal["expense", "income"]
+    candidates: list[UUID] = Field(min_length=1, max_length=10)
+    selected: UUID | None = None

@@ -33,6 +33,7 @@ Every change requires Confirm. Nothing is saved from extraction alone.
 /report [YYYY-MM] — category report, no AI
 /visualize MONTH [YEAR] — monthly charts from confirmed records
 /history [PAGE] — confirmed entries, newest saved first; 10 per page
+/remove expenses or /remove income — choose from the latest 10, then Confirm
 /usage — global AI token allowance
 /advice [YYYY-MM] — grounded guidance
 /budget — current budget status
@@ -145,6 +146,13 @@ class BotService:
             return {"text": format_balance(await finance.current_balance())}
         if route.name in {"balance", "report"}:
             return {"text": format_summary(await finance.summary(route.args or None))}
+        if route.name == "remove":
+            kind = {"expenses": "expense", "expense": "expense", "income": "income"}.get(
+                route.args.lower()
+            )
+            if kind is None:
+                raise InvalidInput("Use /remove expenses or /remove income.")
+            return await pending.removal_choices(kind, update.update_id, message_id)
         if route.name == "history":
             if route.args and (
                 not route.args.isascii()

@@ -180,6 +180,25 @@ async def test_full_webhook_manual_receipt_confirmation_and_zero_llm_commands(db
             await worker.once()
             assert (await FinanceService(app.state.db, uid).summary())["expenses"] == 50000
             assert len(calls) == 3
+            # Removal traverses webhook -> durable worker -> confirmation graph -> ledger.
+            await web.post(
+                "/telegram/webhook", json=message(22, "\\remove expenses"), headers=headers
+            )
+            await worker.once()
+            await worker.once()
+            choice = sent[-1]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
+            await web.post("/telegram/webhook", json=callback(23, choice), headers=headers)
+            await worker.once()
+            await worker.once()
+            assert "Remove this entry?" in sent[-1]["text"]
+            assert (await FinanceService(app.state.db, uid).summary())["expenses"] == 50000
+            confirmation = sent[-1]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
+            await web.post("/telegram/webhook", json=callback(24, confirmation), headers=headers)
+            await worker.once()
+            await worker.once()
+            assert "Entry removed" in sent[-1]["text"]
+            assert (await FinanceService(app.state.db, uid).summary())["expenses"] == 25000
+            assert len(calls) == 3
 
 
 async def test_webhook_security_and_malformed_updates(db, settings):

@@ -4,7 +4,14 @@ from uuid import UUID
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import Budget, OpeningBalance, SavingsContribution, SavingsGoal, Transaction
+from app.models.tables import (
+    Budget,
+    OpeningBalance,
+    SavingsContribution,
+    SavingsGoal,
+    Transaction,
+    active_transaction,
+)
 
 
 class FinanceRepository:
@@ -16,6 +23,7 @@ class FinanceRepository:
     async def summary(self, start: date, end: date) -> dict:
         filters = (
             Transaction.user_id == self.user_id,
+            active_transaction(),
             Transaction.transaction_date >= start,
             Transaction.transaction_date < end,
         )
@@ -43,7 +51,11 @@ class FinanceRepository:
         opening = await self.session.scalar(
             select(OpeningBalance).where(OpeningBalance.user_id == self.user_id)
         )
-        filters = [Transaction.user_id == self.user_id, Transaction.transaction_date <= on_date]
+        filters = [
+            Transaction.user_id == self.user_id,
+            active_transaction(),
+            Transaction.transaction_date <= on_date,
+        ]
         if opening:
             filters.append(Transaction.transaction_date >= opening.as_of)
         net = int(
@@ -68,12 +80,18 @@ class FinanceRepository:
             "balance": (opening.amount if opening else 0) + net,
         }
 
-    async def recent(self, limit: int = 10, offset: int = 0) -> list[Transaction]:
+    async def recent(
+        self, limit: int = 10, offset: int = 0, *, kind: str | None = None
+    ) -> list[Transaction]:
         return list(
             (
                 await self.session.scalars(
                     select(Transaction)
-                    .where(Transaction.user_id == self.user_id)
+                    .where(
+                        Transaction.user_id == self.user_id,
+                        active_transaction(),
+                        Transaction.type == kind if kind else True,
+                    )
                     .order_by(
                         Transaction.created_at.desc(),
                         Transaction.id,

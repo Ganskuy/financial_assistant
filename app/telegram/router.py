@@ -28,6 +28,7 @@ MONTHS = {
 }
 COMMANDS = {
     "balance",
+    "remove",
     "opening",
     "history",
     "usage",
@@ -68,7 +69,7 @@ def period_from_text(text: str) -> str | None:
 
 def route_text(text: str) -> Route:
     text = text.strip()
-    if text.startswith("/"):
+    if text.startswith(("/", "\\")):
         command, _, args = text.partition(" ")
         name = command[1:].split("@")[0].lower()
         return Route(name if name in COMMANDS else "unsupported", args.strip())

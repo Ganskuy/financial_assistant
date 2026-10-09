@@ -13,10 +13,12 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    exists,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql.elements import ColumnElement
 
 
 class Base(DeclarativeBase):
@@ -48,7 +50,7 @@ class PendingTransaction(Base):
     __table_args__ = (
         CheckConstraint("status IN ('pending','editing','confirmed','cancelled')"),
         CheckConstraint(
-            "kind IN ('transaction','budget','goal','saving','opening')",
+            "kind IN ('transaction','budget','goal','saving','opening','removal')",
             name="pending_transactions_kind_check",
         ),
     )
@@ -60,7 +62,8 @@ class CallbackAction(Base):
     pending_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("pending_transactions.id"), index=True)
     action: Mapped[str] = mapped_column(String(8))
     version: Mapped[int] = mapped_column(Integer)
-    __table_args__ = (CheckConstraint("action IN ('confirm','edit','cancel')"),)
+    target_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("transactions.id"))
+    __table_args__ = (CheckConstraint("action IN ('confirm','edit','cancel','select')"),)
 
 
 class Transaction(Base):
@@ -210,3 +213,22 @@ class OpeningBalance(Base):
     as_of: Mapped[date] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = (CheckConstraint("amount >= 0 AND amount <= 1000000000000"),)
+
+
+class TransactionRemoval(Base):
+    """Append-only removal audit; original ledger rows and receipt items remain intact."""
+
+    __tablename__ = "transaction_removals"
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("transactions.id"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    pending_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("pending_transactions.id"), unique=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+def active_transaction() -> ColumnElement[bool]:
+    """Shared predicate for every user-facing ledger read and aggregate."""
+    return ~exists().where(TransactionRemoval.transaction_id == Transaction.id)

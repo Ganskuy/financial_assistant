@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import Transaction
+from app.models.tables import Transaction, active_transaction
 
 
 class VisualizationRepository:
@@ -24,6 +24,7 @@ class VisualizationRepository:
             )
             .where(
                 Transaction.user_id == self.user_id,
+                active_transaction(),
                 Transaction.transaction_date >= start,
                 Transaction.transaction_date < end,
             )

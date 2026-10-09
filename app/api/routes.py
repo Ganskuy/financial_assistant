@@ -30,7 +30,7 @@ async def ready(request: Request):
             await session.execute(select(DailyLLMUsage.usage_date).limit(1))
             await session.execute(select(ProcessedUpdate.next_attempt_at).limit(1))
             version = await session.scalar(text("SELECT version_num FROM alembic_version"))
-            if version != "0003":
+            if version != "0004":
                 raise HTTPException(503, "Database migration mismatch")
         worker = request.app.state.worker
         if worker is not None and any(task.done() for task in worker.tasks):
