@@ -12,10 +12,11 @@ reaching extraction.
 All six user-supplied examples (three previously rejected and three accepted)
 decoded and normalized locally. The rejected examples include bank transfer,
 QRIS and dark wallet confirmations; accepted examples also include a dark wallet
-screen. This does not establish their actual provider failure stage. No new live
-OpenRouter evaluation was performed: external submission of these private images
-requires destination-specific authorization. No claim of improved live accuracy,
-latency or cost is made.
+screen. The authorized Nano evaluation subsequently read all six images. Two previously
+rejected digital payments passed extraction and validation, with exact amount and
+date matches; replaying those outputs against the legacy contract rejects both.
+This confirms the contract incompatibility but does not reconstruct the original
+failed provider responses. No general accuracy, latency or cost improvement is claimed.
 
 ## Implementation
 
@@ -64,9 +65,28 @@ and failed statuses, total/fee grounding, one-retry exhaustion, removing invente
 itemization, caption propagation, confirmation-only persistence and duplicate
 delivery/confirmation. Private examples and raw OCR are not repository fixtures.
 
-Additional live model tokens used for this investigation: **0** (25,000 maximum
-authorized task allowance). Local tests do not prove recognition accuracy on the
-six real examples or production Telegram delivery.
+Authorized live evaluation used **13,171 tokens across 10 provider requests**,
+with no outstanding task reservations or financial writes. The persistent task
+guard checks a conservative full request reservation against the 25,000-token
+ceiling before dispatch; existing global PostgreSQL accounting remains active.
+
+| Case | Live outcome | Tokens | Elapsed seconds |
+| --- | --- | ---: | ---: |
+| u1: transfer | Readable; safely asks for direction | 988 | 2.92 |
+| u2: QRIS payment | Validated; amount/date match | 2,728 | 4.64 |
+| u3: wallet payment | Validated; amount/date match | 3,016 | 3.42 |
+| a1: paper receipt | Validated; amount/date match | 2,729 | 6.42 |
+| a2: paper receipt | Validated; amount/date match | 2,671 | 4.82 |
+| a3: phone payment | OCR passed; extraction blocked before dispatch by token guard | 1,039 | 2.94 |
+
+The four completed extractions passed without recovery. Their amounts and dates
+matched the inspected images (4/4); this is a small sample, not an overall accuracy
+benchmark. All six OCR calls returned readable output. The transfer clarification
+is expected behavior, not an OCR failure. The final extraction was not attempted:
+its conservative reservation exceeded the remaining 11,829-token task allowance.
+No model settings or accounting rules were relaxed to fit another call. Latencies
+are single-run wall times, not a controlled before/after comparison. See the
+[sanitized evaluation record](evaluation/digital-payment-live.json).
 
 ## Remaining limitations
 
@@ -75,6 +95,7 @@ labels, not every bank format or currency notation. They cannot repair incorrect
 OCR, guarantee every merchant role, or derive account ownership. If no supported
 monetary notation is found, existing schema/business validation and confirmation
 remain the safeguards; the evidence check is not a full financial parser. Small
-print can still be lost during downscaling. A controlled, no-ledger-write paired
-live evaluation is still needed before attributing the reported failures to OCR
-or measuring an accuracy improvement.
+print can still be lost during downscaling. The last accepted example still needs
+full live extraction verification, and transfer direction must be supplied by the
+user. A paired live baseline and repeated trials are still needed to measure an
+accuracy improvement; production Telegram delivery was not tested.

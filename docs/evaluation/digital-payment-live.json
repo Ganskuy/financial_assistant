@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-10",
+  "implementation_commit": "6bdc6ce458928a8d175d5fb391e6489dd23e8508",
+  "model": "openai/gpt-5.4-nano",
+  "model_settings_changed": false,
+  "task_token_cap": 25000,
+  "actual_task_tokens": 13171,
+  "outstanding_task_tokens": 0,
+  "provider_requests": 10,
+  "financial_writes": 0,
+  "case_mapping": "u1-u3: unreaded JPEGs sorted by filename; a1-a3: accepted JPEGs sorted by filename. Images and OCR remain private.",
+  "method": "One pass per image through production normalization, OCR, extraction and validation; no stage or confirmation methods called. Persistent conservative per-request task guard plus existing global PostgreSQL accounting. Legacy contract replay uses the same new extraction outputs, not a paired baseline model run.",
+  "cases": [
+    {
+      "case": "u1",
+      "result": "rejected",
+      "stage": "extraction",
+      "error_type": "InvalidInput",
+      "reason": null,
+      "tokens": 988,
+      "latency_seconds": 2.92,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "interpretation": "Expected safe clarification: transfer direction was not provided."
+    },
+    {
+      "case": "u2",
+      "result": "validated",
+      "tokens": 2728,
+      "latency_seconds": 4.64,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "amount_exact_match": true,
+      "date_exact_match": true,
+      "receipt_object_present": false,
+      "legacy_contract_replay": "rejected"
+    },
+    {
+      "case": "u3",
+      "result": "validated",
+      "tokens": 3016,
+      "latency_seconds": 3.42,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "amount_exact_match": true,
+      "date_exact_match": true,
+      "receipt_object_present": false,
+      "legacy_contract_replay": "rejected"
+    },
+    {
+      "case": "a1",
+      "result": "validated",
+      "tokens": 2729,
+      "latency_seconds": 6.42,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "amount_exact_match": true,
+      "date_exact_match": true,
+      "receipt_object_present": true,
+      "legacy_contract_replay": "accepted"
+    },
+    {
+      "case": "a2",
+      "result": "validated",
+      "tokens": 2671,
+      "latency_seconds": 4.82,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "amount_exact_match": true,
+      "date_exact_match": true,
+      "receipt_object_present": true,
+      "legacy_contract_replay": "accepted"
+    },
+    {
+      "case": "a3",
+      "result": "rejected",
+      "stage": "extraction",
+      "error_type": "BudgetExceeded",
+      "reason": null,
+      "tokens": 1039,
+      "latency_seconds": 2.94,
+      "recovery_attempts": 0,
+      "ocr_readable": true,
+      "interpretation": "OCR passed; extraction was not sent because its conservative reservation exceeded the remaining task allowance."
+    }
+  ],
+  "limitations": [
+    "Only four completed extractions; one transfer needs user direction, one extraction was blocked before dispatch by the task reservation guard.",
+    "Amount and date match checks use manually inspected image labels; they are not an exhaustive score for every field.",
+    "No paired live baseline, repeated-run reliability estimate, provider cost comparison or production Telegram acceptance test."
+  ]
+}
