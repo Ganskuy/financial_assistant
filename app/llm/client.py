@@ -83,9 +83,9 @@ class OpenRouterClient:
     async def structured(
         self, role: Role, system: str, data: str, schema: type[T], image: bytes | None = None
     ) -> T:
-        # 6000 source characters can expand sixfold when JSON-escaped. The source
-        # limit is enforced by the extraction boundary; include the JSON envelope.
-        if len(data) > (36_100 if role == "extraction" else 6000):
+        # Up to 6000 OCR characters + 1024 caption characters can expand sixfold
+        # when JSON-escaped. Source limits are enforced at the extraction boundary.
+        if len(data) > (42_300 if role == "extraction" else 6000):
             raise InvalidModelOutput("input_too_long", retryable=False)
         selected = profile(self.settings, role)
         # LangChain messages and Runnable wrap the only permitted model transport.
@@ -215,9 +215,18 @@ class OpenRouterClient:
                             "total_tokens": inp + out,
                             "latency_ms": round((time.monotonic() - started) * 1000),
                             "status": "ok",
-                            "prompt_version": "extraction-v3"
-                            if role == "extraction"
-                            else "finance-v1",
+                            "prompt_version": (
+                                "receipt-ocr-v2"
+                                if role == "vision"
+                                else (
+                                    "extraction-v3+payment-image-v1"
+                                    if "PAYMENT IMAGES (payment-image-v1)"
+                                    in payload["messages"][0]["content"]
+                                    else "extraction-v3"
+                                )
+                                if role == "extraction"
+                                else "finance-v1"
+                            ),
                             "cost": usage.get("cost"),
                             "remaining_tokens": (await self.budget.usage())["remaining"],
                         },

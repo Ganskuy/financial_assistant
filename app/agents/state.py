@@ -12,6 +12,7 @@ class WorkflowState(TypedDict, total=False):
     text: str
     image: bytes
     input_source: str
+    receipt_context: str
     recovery_attempts: int
     extraction_corrections: list[str]
     extraction: Extraction

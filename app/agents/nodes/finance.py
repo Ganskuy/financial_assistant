@@ -6,7 +6,12 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from app.agents.prompts.system import ADVISOR_PROMPT, EXTRACTION_PROMPT, OCR_PROMPT
+from app.agents.prompts.system import (
+    ADVISOR_PROMPT,
+    EXTRACTION_PROMPT,
+    OCR_PROMPT,
+    PAYMENT_IMAGE_PROMPT,
+)
 from app.agents.state import WorkflowState
 from app.core.errors import InvalidInput, InvalidModelOutput, SafeError
 from app.llm.router import Role
@@ -16,6 +21,7 @@ from app.services.extraction import ground_transaction
 from app.services.finance import FinanceService, format_summary
 from app.services.pending import PendingService
 from app.services.receipt_diagnostics import receipt_date_candidates
+from app.services.receipt_input import image_context, payment_amounts
 from app.services.validation import today, validate_transaction
 
 log = logging.getLogger("finance")
@@ -130,7 +136,9 @@ class FinanceNodes:
         return result, recovery
 
     @staticmethod
-    def _extraction_contract(result: Extraction, receipt: bool) -> None:
+    def _extraction_contract(
+        result: Extraction, receipt: bool, *, payment: bool = False, direction: str = "expense"
+    ) -> None:
         if result.intent in {"expense", "income"}:
             if result.transaction is None or result.transaction.intent != result.intent:
                 raise InvalidModelOutput("intent_mismatch")
@@ -139,9 +147,9 @@ class FinanceNodes:
         if receipt and result.intent == "unknown":
             raise InvalidModelOutput("receipt_incomplete", retryable=False)
         if receipt and (
-            result.intent != "expense"
+            result.intent != direction
             or not result.transaction
-            or result.transaction.receipt is None
+            or (not payment and result.transaction.receipt is None)
         ):
             raise InvalidModelOutput("receipt_contract")
 
@@ -169,23 +177,60 @@ class FinanceNodes:
         if len(state["text"]) > 6000:
             raise InvalidInput("Transaction text is too long. Please send one transaction.")
         receipt = state.get("input_source") == "receipt"
-        data = json.dumps({"untrusted_text": state["text"]}, ensure_ascii=False)
+        kind, direction = (
+            image_context(state["text"], state.get("receipt_context", ""))
+            if receipt
+            else ("retail", "expense")
+        )
+        payment = kind != "retail"
+        if len(state.get("receipt_context", "")) > 1024:
+            raise InvalidInput("Receipt caption is too long.")
+        amounts = payment_amounts(state["text"], direction=direction) if payment else set()
+
+        def check(result: Extraction) -> None:
+            self._extraction_contract(result, receipt, payment=payment, direction=direction)
+            if (
+                payment
+                and result.transaction
+                and amounts
+                and result.transaction.amount not in amounts
+            ):
+                raise InvalidModelOutput("payment_amount_ungrounded")
+
+        data = json.dumps(
+            {
+                "untrusted_text": state["text"],
+                **(
+                    {"untrusted_caption": state["receipt_context"]}
+                    if state.get("receipt_context")
+                    else {}
+                ),
+            },
+            ensure_ascii=False,
+        )
         prompt = EXTRACTION_PROMPT + f" Today in Asia/Jakarta: {today()}."
         if receipt:
-            prompt += " Source is a receipt transcription; require expense and receipt details, or unknown/null if insufficient."
+            if payment:
+                prompt += PAYMENT_IMAGE_PROMPT + f" Requested transaction direction: {direction}."
+            else:
+                prompt += " Source is a retail receipt transcription; require expense and printed receipt details, or unknown/null if insufficient."
         result, recovery = await self._structured(
             state,
             "extraction",
             prompt,
             data,
             Extraction,
-            check=lambda result: self._extraction_contract(result, receipt),
+            check=check,
         )
         corrections = []
         if result.transaction is not None:
             transaction, corrections = ground_transaction(
                 result.transaction, state["text"], receipt=receipt
             )
+            if payment and transaction.receipt is not None:
+                # Digital confirmations do not substantiate itemized sales details.
+                transaction = transaction.model_copy(update={"receipt": None})
+                corrections.append("payment_itemization_removed")
             result = result.model_copy(update={"transaction": transaction})
             log.info(
                 "transaction_extracted_date",

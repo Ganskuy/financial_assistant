@@ -108,7 +108,14 @@ class BotService:
                 file.file_id, file.file_size, getattr(file, "mime_type", None)
             )
             return (
-                await self.receipt.ainvoke({**state, "image": image, "input_source": "receipt"})
+                await self.receipt.ainvoke(
+                    {
+                        **state,
+                        "image": image,
+                        "input_source": "receipt",
+                        "receipt_context": message.caption or "",
+                    }
+                )
             )["response"]
         text = message.text or ""
         if not text:

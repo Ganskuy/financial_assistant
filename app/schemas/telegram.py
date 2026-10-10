@@ -36,6 +36,7 @@ class Message(TelegramObject):
     from_user: TelegramUser | None = Field(default=None, alias="from")
     chat: Chat
     text: str | None = Field(default=None, max_length=4096)
+    caption: str | None = Field(default=None, max_length=1024)
     photo: list[Photo] = Field(default_factory=list, max_length=20)
     document: Document | None = None
 

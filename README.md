@@ -62,6 +62,8 @@ Each structured request permits at most two HTTP attempts for transient errors. 
 
 Extraction now distinguishes explicit named merchants, generic businesses such as SPBU, products, destinations and unknown merchants. Receipt ingestion preserves transparent PNG text by compositing onto white. See [extraction changes and measured verification](docs/EXTRACTION_IMPROVEMENTS.md) and [reproducible evaluations](docs/EXTRACTION_EVALUATION.md).
 
+Digital QRIS, wallet and bank payment confirmations can produce a transaction without fabricated receipt items. For person-to-person transfer screenshots, add the caption `Pengeluaran` when you sent money or `Pemasukan` when you received it. Transfers between your own accounts are neither income nor expenses. Every valid result still requires confirmation. See [digital payment validation and verification limits](docs/DIGITAL_PAYMENT_IMAGES.md).
+
 ### Backend aggregation and model efficiency
 
 Financial aggregation happens before advisor model calls. `/report`, monthly `/balance`, `/budget`, and `/advice` share the existing monthly summary calculation: SQL groups confirmed transactions by type/category, and the backend combines those sums using integer IDR. The summary now requires one query. `/balance` without a month retains its separate opening-balance calculation.
